@@ -1,10 +1,6 @@
-Here’s the complete `README.md` file formatted as plain text so you can copy and paste it directly:
+# Hedeyeti
 
----
-
-# Hedieaty
-
-**Hedieaty** is a gift list management app built with Flutter. The app simplifies the process of creating, managing, and sharing wish lists for special occasions such as birthdays, weddings, engagements, graduations, and holidays.
+**Hedeyeti** is a gift list management app built with Flutter. The app simplifies the process of creating, managing, and sharing wish lists for special occasions such as birthdays, weddings, engagements, graduations, and holidays.
 
 ---
 
@@ -146,15 +142,11 @@ lib/
 
 ## License
 
-© Haytham Azmi, 2024. All Rights Reserved.  
+© Khaled Taha, 2024. All Rights Reserved.  
 This project is proprietary and should not be shared without permission.
 
 ---
 
 ## Contact
 
-For inquiries or support, contact [your-email@example.com].
-
----
-
-You can now copy and paste this text into a `README.md` file in your repository.
+For inquiries or support, contact [kmhtaha@gmail.com].
