@@ -28,7 +28,35 @@
 
 ## Screenshots
 
-(Add screenshots of your app here once available)
+### Home Page
+![Home Page](assets/screenshots/homePage.png)
+
+### My Profile (App Drawer)
+![My Profile](assets/screenshots/appDrawer_MyProfile.png)
+
+### Create Event
+![Create Event](assets/screenshots/createEvent.png)
+
+### Edit Event
+![Edit Event](assets/screenshots/editEvent.png)
+
+### Friend Events
+![Friend Events](assets/screenshots/friendEvents.png)
+
+### Gift List for Event
+![Gift List for Event](assets/screenshots/friendGiftListForEvent.png)
+
+### My Pledged Gifts
+![My Pledged Gifts](assets/screenshots/myPledgedGifts.png)
+
+### Delete Event Popup
+![Delete Event Popup](assets/screenshots/deleteEventPopup.png)
+
+### Example Users
+![Example Users - Girl 1](assets/girl01.png)
+![Example Users - Girl 2](assets/girl02.png)
+![Example Users - Man 1](assets/man01.png)
+![Example Users - Man 2](assets/man02.png)
 
 ---
 
