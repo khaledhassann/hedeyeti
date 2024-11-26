@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/models/Event.dart';
 import '../widgets/deletion_confirmation_dialog.dart';
 import '../widgets/empty_list_message.dart';
 import '../widgets/event_card.dart';
@@ -8,13 +9,15 @@ class EventListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final friend =
+    // Retrieve the passed arguments
+    final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
-    final events = friend['events'] ?? [];
+    final String friendName = args['name'] ?? 'Friend';
+    final List<Event> events = List<Event>.from(args['events'] ?? []);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("${friend['name']}'s Events"),
+        title: Text("$friendName's Events"),
       ),
       body: events.isEmpty
           ? const EmptyListMessage(
@@ -32,26 +35,21 @@ class EventListPage extends StatelessWidget {
                       context,
                       '/friends-gift-list',
                       arguments: {
-                        'eventName': event['name'],
-                        'eventDate': event['date'],
-                        'gifts': event['gifts'],
+                        'eventName': event.name,
+                        'eventDate': event.formattedDate,
+                        'gifts': event.gifts,
                       },
                     );
                   },
                   onPopupSelected: (value) {
                     if (value == 'Edit') {
-                      final eventData = {
-                        ...event,
-                        'category': event['category'] ?? 'Uncategorized',
-                      };
-
                       Navigator.pushNamed(
                         context,
                         '/create-edit-event',
-                        arguments: eventData,
+                        arguments: event,
                       );
                     } else if (value == 'Delete') {
-                      _confirmDelete(context, event['name'], index, events);
+                      _confirmDelete(context, event.name, index, events);
                     }
                   },
                 );
@@ -69,8 +67,8 @@ class EventListPage extends StatelessWidget {
           title: 'Delete Event',
           content: 'Are you sure you want to delete "$eventName"?',
           onConfirm: () {
-            events.removeAt(index);
-            (context as Element).markNeedsBuild();
+            events.removeAt(index); // Remove the event
+            (context as Element).markNeedsBuild(); // Rebuild the UI
           },
         );
       },
