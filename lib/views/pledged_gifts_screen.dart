@@ -1,26 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/models/Gift.dart';
+import 'package:hedeyeti/utils/constants.dart';
 
 class MyPledgedGiftsPage extends StatelessWidget {
-  final List<Map<String, dynamic>> pledgedGifts = [
-    {
-      'friendName': 'John Doe',
-      'giftName': 'Smartphone',
-      'description': 'Latest model smartphone',
-      'price': 799.99,
-      'dueDate': '2024-12-15',
-      'status': 'Pending',
-      'category': 'Electronics', // Added category for consistency
-    },
-    {
-      'friendName': 'Jane Smith',
-      'giftName': 'Headphones',
-      'description': 'Noise-canceling headphones',
-      'price': 199.99,
-      'dueDate': '2024-11-30',
-      'status': 'Completed',
-      'category': 'Accessories', // Added category for consistency
-    },
-  ];
+  final List<Gift> pledgedGifts = EXAMPLE_PLEDGED_GIFTS;
 
   @override
   Widget build(BuildContext context) {
@@ -44,16 +27,16 @@ class MyPledgedGiftsPage extends StatelessWidget {
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: ListTile(
                     leading: Icon(
-                      gift['status'] == 'Completed'
+                      gift.status == 'Completed'
                           ? Icons.check_circle
                           : Icons.pending,
-                      color: gift['status'] == 'Completed'
+                      color: gift.status == 'Completed'
                           ? Colors.green
                           : Colors.orange,
                     ),
-                    title: Text(gift['giftName']),
+                    title: Text(gift.name),
                     subtitle: Text(
-                      '${gift['description']}\nPrice: \$${gift['price']}\nDue: ${gift['dueDate']}',
+                      '${gift.description}\nPrice: \$${gift.price}\nDue: ${EXAMPLE_EVENTS[0].formattedDate}',
                     ),
                     isThreeLine: true,
                     trailing: PopupMenuButton<String>(
@@ -64,18 +47,18 @@ class MyPledgedGiftsPage extends StatelessWidget {
                             context,
                             '/create-edit-gift',
                             arguments: {
-                              'name': gift['giftName'],
-                              'description': gift['description'],
-                              'price': gift['price'],
-                              'category': gift['category'],
-                              'status': gift['status'] == 'Pending'
+                              'name': gift.name,
+                              'description': gift.description,
+                              'price': gift.price,
+                              'category': gift.category,
+                              'status': gift.status == 'Pending'
                                   ? 'Available'
                                   : 'Pledged',
                             },
                           );
                         } else if (value == 'Cancel') {
                           // Handle pledge cancellation
-                          _confirmCancel(context, gift['giftName']);
+                          _confirmCancel(context, gift.name);
                         }
                       },
                       itemBuilder: (context) => [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/Gift.dart';
 import 'package:hedeyeti/models/User.dart';
+import 'package:hedeyeti/utils/constants.dart';
 
 class HomePage extends StatelessWidget {
   late final List<Gift> gifts;
@@ -9,76 +10,10 @@ class HomePage extends StatelessWidget {
   late final List<User> exampleUsers;
 
   HomePage({Key? key}) : super(key: key) {
-    // Initialize gifts
-    gifts = [
-      Gift(
-          name: "Smartphone",
-          category: 'Electronics',
-          price: 799.99,
-          status: 'Available'),
-      Gift(
-          name: 'Blender',
-          category: 'Home Appliances',
-          price: 149.99,
-          status: 'Available'),
-      Gift(
-          name: 'Laptop',
-          category: 'Electronics',
-          price: 1499.75,
-          status: 'Pledged'),
-      Gift(
-          name: 'Flutter for Beginners',
-          category: 'Books',
-          price: 24.99,
-          status: 'Available'),
-    ];
-
-    // Initialize events
-    events = [
-      Event(
-          name: 'Birthday party',
-          date: DateTime(2024, 12, 15),
-          category: 'Birthday',
-          gifts: gifts),
-      Event(
-          name: 'Wedding',
-          date: DateTime(2025, 9, 30),
-          category: 'Wedding',
-          gifts: gifts),
-      Event(
-          name: 'Graduation party',
-          date: DateTime(2025, 7, 1),
-          category: 'Graduation',
-          gifts: gifts),
-    ];
-
-    // Initialize users
-    exampleUsers = [
-      User(
-          name: 'Khaled Taha',
-          email: 'khaled@email.com',
-          profilePicture: 'assets/images.png',
-          isMe: true,
-          events: events),
-      User(
-          name: 'John Doe',
-          email: 'john.doe@email.com',
-          profilePicture: 'assets/man02.png',
-          isMe: false,
-          events: events),
-      User(
-          name: 'Jane Smith',
-          email: 'jane.smith@email.com',
-          profilePicture: 'assets/girl01.png',
-          isMe: false,
-          events: []),
-      User(
-          name: 'Pablo Escobar',
-          email: 'pablo.escobar@email.com',
-          profilePicture: 'assets/man01.png',
-          isMe: false,
-          events: events),
-    ];
+    // initialization with example lists
+    gifts = EXAMPLE_GIFTS;
+    events = EXAMPLE_EVENTS;
+    exampleUsers = EXAMPLE_USERS;
   }
 
   @override

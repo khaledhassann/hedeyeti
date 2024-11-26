@@ -4,11 +4,13 @@ class Gift {
   String category;
   double price;
   String status;
+  String? description;
 
   Gift({
     required this.name,
     required this.category,
     required this.price,
     required this.status,
+    this.description,
   });
 }
