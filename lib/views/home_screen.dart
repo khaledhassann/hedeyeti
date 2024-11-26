@@ -197,6 +197,7 @@ class HomePage extends StatelessWidget {
                 title: const Text('Settings'),
                 onTap: () {
                   // TODO: Navigate to settings page
+                  Navigator.pushNamed(context, '/profile');
                 },
               ),
               ListTile(

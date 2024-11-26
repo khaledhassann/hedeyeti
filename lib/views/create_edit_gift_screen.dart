@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../widgets/reusable_text_field.dart';
+import '../widgets/gift_category_dropdown.dart';
+import '../widgets/primary_button.dart';
 
 class CreateEditGiftPage extends StatefulWidget {
   static const routeName = '/create-edit-gift';
@@ -14,18 +17,16 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   late TextEditingController _priceController;
-  String _category = 'Electronics'; // Default category
+  String _category = 'Electronics';
   bool _isPledged = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Retrieve gift data from arguments
     final gift =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-    // Initialize controllers with gift data if available
     _nameController = TextEditingController(text: gift?['name'] ?? '');
     _descriptionController =
         TextEditingController(text: gift?['description'] ?? '');
@@ -53,9 +54,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
         'status': _isPledged ? 'Pledged' : 'Available',
       };
 
-      print('Gift saved: $giftDetails');
-      Navigator.pop(
-          context, giftDetails); // Pass data back to the previous screen
+      Navigator.pop(context, giftDetails);
     }
   }
 
@@ -76,47 +75,41 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
           child: ListView(
             children: [
               // Gift Name
-              TextFormField(
+              ReusableTextField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Gift Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a gift name';
-                  }
-                  return null;
-                },
+                labelText: 'Gift Name',
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Please enter a gift name'
+                    : null,
               ),
 
+              const SizedBox(height: 16),
+
               // Description
-              TextFormField(
+              ReusableTextField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                labelText: 'Description',
                 maxLines: 3,
               ),
 
+              const SizedBox(height: 16),
+
               // Category Dropdown
-              DropdownButtonFormField<String>(
+              GiftCategoryDropdown(
                 value: _category,
-                items: const [
-                  DropdownMenuItem(
-                      value: 'Electronics', child: Text('Electronics')),
-                  DropdownMenuItem(value: 'Books', child: Text('Books')),
-                  DropdownMenuItem(value: 'Clothing', child: Text('Clothing')),
-                  DropdownMenuItem(
-                      value: 'Accessories', child: Text('Accessories')),
-                ],
                 onChanged: (value) {
                   setState(() {
                     _category = value!;
                   });
                 },
-                decoration: const InputDecoration(labelText: 'Category'),
               ),
 
+              const SizedBox(height: 16),
+
               // Price
-              TextFormField(
+              ReusableTextField(
                 controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price (\$)'),
+                labelText: 'Price (\$)',
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -129,6 +122,8 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
                 },
               ),
 
+              const SizedBox(height: 16),
+
               // Status Toggle
               SwitchListTile(
                 value: _isPledged,
@@ -140,13 +135,12 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
                 title: const Text('Mark as Pledged'),
               ),
 
+              const SizedBox(height: 16),
+
               // Save Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saveGift,
-                  child: const Text('Save Gift'),
-                ),
+              PrimaryButton(
+                text: 'Save Gift',
+                onPressed: _saveGift,
               ),
             ],
           ),

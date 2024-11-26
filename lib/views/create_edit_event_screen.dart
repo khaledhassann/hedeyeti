@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../widgets/event_category_dropdown.dart';
+
+import '../widgets/primary_button.dart';
+import '../widgets/reusable_text_field.dart';
 
 class CreateEditEventPage extends StatefulWidget {
   static const routeName = '/create-edit-event';
@@ -15,18 +19,15 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
   late TextEditingController _dateController;
   late TextEditingController _locationController;
   late TextEditingController _descriptionController;
-  String _category = 'Birthday'; // Default category
+  String _category = 'Birthday';
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Retrieve and verify the passed arguments
     final args = ModalRoute.of(context)?.settings.arguments;
-    print("Received Arguments: ${args.runtimeType} - $args");
 
     if (args is Map<dynamic, dynamic>) {
-      // Initialize controllers with passed arguments
       _nameController = TextEditingController(text: args['name'] ?? '');
       _dateController = TextEditingController(text: args['date'] ?? '');
       _locationController = TextEditingController(text: args['location'] ?? '');
@@ -34,7 +35,6 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
           TextEditingController(text: args['description'] ?? '');
       _category = args['category'] ?? 'Birthday';
     } else {
-      // Initialize empty controllers for "Create" mode
       _nameController = TextEditingController();
       _dateController = TextEditingController();
       _locationController = TextEditingController();
@@ -51,6 +51,21 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     super.dispose();
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        _dateController.text =
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
+      });
+    }
+  }
+
   void _saveEvent() {
     if (_formKey.currentState!.validate()) {
       final eventDetails = {
@@ -60,8 +75,6 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
         'description': _descriptionController.text,
         'category': _category,
       };
-
-      // Save or pass back the event data
       Navigator.pop(context, eventDetails);
     }
   }
@@ -82,72 +95,41 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
           key: _formKey,
           child: ListView(
             children: [
-              // Event Name
-              TextFormField(
+              ReusableTextField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Event Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter an event name';
-                  }
-                  return null;
-                },
+                labelText: 'Event Name',
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Please enter an event name'
+                    : null,
               ),
-
-              // Event Date
-              TextFormField(
+              // Event Date with Date Picker
+              ReusableTextField(
                 controller: _dateController,
-                decoration: const InputDecoration(
-                  labelText: 'Date',
-                  hintText: 'YYYY-MM-DD',
-                ),
-                keyboardType: TextInputType.datetime,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a valid date';
-                  }
-                  return null;
-                },
+                labelText: 'Event Date',
+                hintText: 'YYYY-MM-DD',
+                readOnly: true,
+                onTap: () => _selectDate(context),
               ),
-
-              // Location
-              TextFormField(
+              ReusableTextField(
                 controller: _locationController,
-                decoration: const InputDecoration(labelText: 'Location'),
+                labelText: 'Location',
               ),
-
-              // Description
-              TextFormField(
+              ReusableTextField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                labelText: 'Description',
                 maxLines: 3,
               ),
-
-              // Category Dropdown
-              DropdownButtonFormField<String>(
+              EventCategoryDropdown(
                 value: _category,
-                items: const [
-                  DropdownMenuItem(value: 'Birthday', child: Text('Birthday')),
-                  DropdownMenuItem(value: 'Wedding', child: Text('Wedding')),
-                  DropdownMenuItem(
-                      value: 'Graduation', child: Text('Graduation')),
-                  DropdownMenuItem(value: 'Holiday', child: Text('Holiday')),
-                ],
                 onChanged: (value) {
                   setState(() {
                     _category = value!;
                   });
                 },
-                decoration: const InputDecoration(labelText: 'Category'),
               ),
-
-              // Save Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _saveEvent,
-                  child: const Text('Save Event'),
-                ),
+              PrimaryButton(
+                text: 'Save Event',
+                onPressed: _saveEvent,
               ),
             ],
           ),

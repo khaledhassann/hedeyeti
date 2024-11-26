@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:hedeyeti/screens/create_edit_event_screen.dart';
-import 'package:hedeyeti/screens/create_edit_gift_screen.dart';
-import 'package:hedeyeti/screens/event_list_screen.dart';
-import 'package:hedeyeti/screens/friend_gift_list_screen.dart';
-import 'package:hedeyeti/screens/gift_list_screen.dart';
-import 'package:hedeyeti/screens/home_screen.dart';
-import 'package:hedeyeti/screens/pledged_gifts_screen.dart';
-import 'package:hedeyeti/screens/profile_page_screen.dart';
+import 'package:hedeyeti/views/create_edit_event_screen.dart';
+import 'package:hedeyeti/views/create_edit_gift_screen.dart';
+import 'package:hedeyeti/views/event_list_screen.dart';
+import 'package:hedeyeti/views/friend_gift_list_screen.dart';
+import 'package:hedeyeti/views/gift_list_screen.dart';
+import 'package:hedeyeti/views/home_screen.dart';
+import 'package:hedeyeti/views/pledged_gifts_screen.dart';
+import 'package:hedeyeti/views/profile_page_screen.dart';
 
 void main() {
   runApp(const MyApp());
