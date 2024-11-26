@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/models/Gift.dart';
 import 'package:hedeyeti/widgets/empty_list_message.dart';
 
 class GiftListBase extends StatelessWidget {
   final String title;
-  final List<Map<String, dynamic>> gifts;
+  final List<Gift> gifts;
   final bool canEdit;
   final bool canPledge;
   final bool showAddButton;
@@ -64,21 +65,21 @@ class GiftListBase extends StatelessWidget {
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: gift['status'] == 'Pledged'
+                      backgroundColor: gift.status == 'Pledged'
                           ? Colors.red[100]
                           : Colors.green[100],
                       child: Icon(
-                        gift['status'] == 'Pledged'
+                        gift.status == 'Pledged'
                             ? Icons.check
                             : Icons.card_giftcard,
-                        color: gift['status'] == 'Pledged'
+                        color: gift.status == 'Pledged'
                             ? Colors.red
                             : Colors.green,
                       ),
                     ),
-                    title: Text(gift['name']),
+                    title: Text(gift.name),
                     subtitle: Text(
-                      'Category: ${gift['category']} - \$${gift['price']}',
+                      'Category: ${gift.category} - \$${gift.price}',
                     ),
                     trailing: _buildActions(context, index, gift),
                   ),
@@ -95,9 +96,8 @@ class GiftListBase extends StatelessWidget {
     );
   }
 
-  Widget? _buildActions(
-      BuildContext context, int index, Map<String, dynamic> gift) {
-    if (canEdit && gift['status'] != 'Pledged') {
+  Widget? _buildActions(BuildContext context, int index, Gift gift) {
+    if (canEdit && gift.status != 'Pledged') {
       return PopupMenuButton<String>(
         onSelected: (value) {
           if (value == 'Edit') {
@@ -119,7 +119,7 @@ class GiftListBase extends StatelessWidget {
       );
     }
 
-    if (canPledge && gift['status'] != 'Pledged') {
+    if (canPledge && gift.status != 'Pledged') {
       return TextButton(
         onPressed: () => onPledgeGift?.call(index),
         child: const Text('Pledge'),

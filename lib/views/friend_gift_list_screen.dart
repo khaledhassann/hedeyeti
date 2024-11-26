@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/models/Gift.dart';
 import '../widgets/gift_list_base.dart';
 
 class FriendsGiftListPage extends StatefulWidget {
@@ -9,7 +10,7 @@ class FriendsGiftListPage extends StatefulWidget {
 }
 
 class _FriendsGiftListPageState extends State<FriendsGiftListPage> {
-  late List<Map<String, dynamic>> gifts;
+  late List<Gift> gifts;
   late String eventName;
   late String eventDate;
 
@@ -22,17 +23,17 @@ class _FriendsGiftListPageState extends State<FriendsGiftListPage> {
 
     eventName = args['eventName'] ?? 'Event';
     eventDate = args['eventDate'] ?? 'Unknown Date';
-    gifts = List<Map<String, dynamic>>.from(args['gifts'] ?? []);
+    gifts = List<Gift>.from(args['gifts'] ?? []);
   }
 
   void _pledgeGift(int index) {
     setState(() {
-      gifts[index]['status'] = 'Pledged';
+      gifts[index].status = 'Pledged';
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('You pledged to buy "${gifts[index]['name']}"'),
+        content: Text('You pledged to buy "${gifts[index].name}"'),
       ),
     );
   }
@@ -40,11 +41,11 @@ class _FriendsGiftListPageState extends State<FriendsGiftListPage> {
   void _sortGifts(String sortBy) {
     setState(() {
       if (sortBy == 'Name') {
-        gifts.sort((a, b) => a['name'].compareTo(b['name']));
+        gifts.sort((a, b) => a.name.compareTo(b.name));
       } else if (sortBy == 'Category') {
-        gifts.sort((a, b) => a['category'].compareTo(b['category']));
+        gifts.sort((a, b) => a.category.compareTo(b.category));
       } else if (sortBy == 'Status') {
-        gifts.sort((a, b) => a['status'].compareTo(b['status']));
+        gifts.sort((a, b) => a.status.compareTo(b.status));
       }
     });
   }
