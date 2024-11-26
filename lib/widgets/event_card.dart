@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/models/Event.dart';
 
 class EventCard extends StatelessWidget {
-  final Map<String, dynamic> event;
+  final Event event;
   final void Function() onTap;
   final void Function(String) onPopupSelected;
 
@@ -18,8 +19,8 @@ class EventCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: ListTile(
         onTap: onTap,
-        title: Text(event['name']),
-        subtitle: Text("Date: ${event['date']}"),
+        title: Text(event.name),
+        subtitle: Text("Date: ${event.formattedDate}"),
         trailing: PopupMenuButton<String>(
           onSelected: onPopupSelected,
           itemBuilder: (context) => const [
