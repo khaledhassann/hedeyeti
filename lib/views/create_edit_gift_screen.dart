@@ -141,6 +141,8 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
               PrimaryButton(
                 text: 'Save Gift',
                 onPressed: _saveGift,
+                snackbarMessage: 'Gift saved successfully!',
+                snackbarColor: Colors.green,
               ),
             ],
           ),

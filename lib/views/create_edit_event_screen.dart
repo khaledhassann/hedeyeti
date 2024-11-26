@@ -130,6 +130,8 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
               PrimaryButton(
                 text: 'Save Event',
                 onPressed: _saveEvent,
+                snackbarMessage: 'Event saved successfully!',
+                snackbarColor: Colors.green,
               ),
             ],
           ),

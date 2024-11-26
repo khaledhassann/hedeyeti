@@ -1,119 +1,68 @@
 import 'package:flutter/material.dart';
+import '../widgets/gift_list_base.dart';
 
-class GiftListPage extends StatelessWidget {
-  final List<Map<String, dynamic>> gifts = [
-    {
-      'name': 'Smartphone',
-      'category': 'Electronics',
-      'price': 700.0,
-      'status': 'Available',
-    },
-    {
-      'name': 'Book: Flutter for Beginners',
-      'category': 'Books',
-      'price': 25.0,
-      'status': 'Pledged',
-    },
-    {
-      'name': 'Headphones',
-      'category': 'Accessories',
-      'price': 50.0,
-      'status': 'Available',
-    },
-  ];
+class GiftListPage extends StatefulWidget {
+  const GiftListPage({Key? key}) : super(key: key);
+
+  @override
+  State<GiftListPage> createState() => _GiftListPageState();
+}
+
+class _GiftListPageState extends State<GiftListPage> {
+  late List<Map<String, dynamic>> gifts;
+
+  @override
+  void initState() {
+    super.initState();
+    gifts = [
+      // Example data
+      {
+        'name': 'Smartphone',
+        'category': 'Electronics',
+        'price': 700.0,
+        'status': 'Available'
+      },
+      {'name': 'Book', 'category': 'Books', 'price': 25.0, 'status': 'Pledged'},
+    ];
+  }
+
+  void _addGift() {
+    // Navigate to add gift screen
+  }
+
+  void _editGift(int index) {
+    // Navigate to edit gift screen with gift data
+  }
+
+  void _deleteGift(int index) {
+    setState(() {
+      gifts.removeAt(index);
+    });
+  }
+
+  void _sortGifts(String sortBy) {
+    setState(() {
+      if (sortBy == 'Name') {
+        gifts.sort((a, b) => a['name'].compareTo(b['name']));
+      } else if (sortBy == 'Category') {
+        gifts.sort((a, b) => a['category'].compareTo(b['category']));
+      } else if (sortBy == 'Status') {
+        gifts.sort((a, b) => a['status'].compareTo(b['status']));
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gift List'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              // TODO: Implement sorting logic
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'Name',
-                child: Text('Sort by Name'),
-              ),
-              const PopupMenuItem(
-                value: 'Category',
-                child: Text('Sort by Category'),
-              ),
-              const PopupMenuItem(
-                value: 'Status',
-                child: Text('Sort by Status'),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: gifts.length,
-        itemBuilder: (context, index) {
-          final gift = gifts[index];
-          return Card(
-            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: gift['status'] == 'Pledged'
-                    ? Colors.red[100]
-                    : Colors.green[100],
-                child: Icon(
-                  gift['status'] == 'Pledged'
-                      ? Icons.check
-                      : Icons.card_giftcard,
-                  color:
-                      gift['status'] == 'Pledged' ? Colors.red : Colors.green,
-                ),
-              ),
-              title: Text(gift['name']),
-              subtitle: Text(
-                '${gift['category']} - \$${gift['price']}',
-              ),
-              trailing: PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'Edit') {
-                    // TODO: Navigate to Edit Gift Page
-                    Navigator.pushNamed(
-                      context,
-                      '/create-edit-gift',
-                      arguments: gift, // Pass the gift's data for editing
-                    );
-                  } else if (value == 'Delete') {
-                    // TODO: Implement Delete Functionality
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'Edit',
-                    child: Text('Edit'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'Delete',
-                    child: Text('Delete'),
-                  ),
-                ],
-              ),
-              onTap: () {
-                // TODO: Navigate to Gift Details Page
-                Navigator.pushNamed(context, '/gift-details');
-              },
-            ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(
-            context,
-            '/create-edit-gift', // Named route for the page
-          );
-        },
-        tooltip: 'Add Gift',
-        child: const Icon(Icons.add),
-      ),
+    return GiftListBase(
+      title: 'Event Gifts',
+      gifts: gifts,
+      canEdit: true,
+      showAddButton: true,
+      onAddGift: _addGift,
+      onEditGift: _editGift,
+      onDeleteGift: _deleteGift,
+      onSort: _sortGifts,
     );
   }
 }
