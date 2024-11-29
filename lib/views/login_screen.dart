@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/views/home_screen.dart';
 import 'package:hedeyeti/views/register_screen.dart';
+import 'package:hedeyeti/views/registration_journey.dart';
 import '../services/firebase_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -66,40 +67,63 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
+      appBar: AppBar(
+          title: const Text(
+        'Login',
+        style: TextStyle(fontSize: 24, color: Colors.deepPurple),
+      )),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Flexible(
-                child: TextFormField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    return null;
-                  },
+              // App Logo and Name
+              Image.asset(
+                'assets/hedeyeti-logo.png', // Add a logo image asset
+                height: 150,
+              ),
+              const SizedBox(height: 32),
+
+              // Login Form
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        final emailRegex =
+                            RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                        if (!emailRegex.hasMatch(value)) {
+                          return 'Please enter a valid email address';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(labelText: 'Password'),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  return null;
-                },
-              ),
               const SizedBox(height: 24),
+
+              // Login Button
               _isLoading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(
@@ -107,10 +131,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text('Login'),
                     ),
               const SizedBox(height: 16),
+
+              // Registration Option
               TextButton(
                 onPressed: () {
                   Navigator.pushReplacementNamed(
-                      context, RegisterScreen.routeName);
+                      context, RegistrationJourney.routeName);
                 },
                 child: const Text('Don\'t have an account? Register'),
               ),

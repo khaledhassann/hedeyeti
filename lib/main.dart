@@ -10,6 +10,7 @@ import 'package:hedeyeti/views/login_screen.dart';
 import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 import 'package:hedeyeti/views/profile_page_screen.dart';
 import 'package:hedeyeti/views/register_screen.dart';
+import 'package:hedeyeti/views/registration_journey.dart';
 
 void main() async {
   // firebse initialization
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
       routes: {
         HomePage.routeName: (context) => HomePage(),
         LoginScreen.routeName: (context) => const LoginScreen(),
+        RegistrationJourney.routeName: (context) => RegistrationJourney(),
         RegisterScreen.routeName: (context) => const RegisterScreen(),
         EventListPage.routeName: (context) => EventListPage(),
         GiftListPage.routeName: (context) => const GiftListPage(),
