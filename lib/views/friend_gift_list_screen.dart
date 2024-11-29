@@ -4,6 +4,7 @@ import '../widgets/gift_list_base.dart';
 
 class FriendsGiftListPage extends StatefulWidget {
   const FriendsGiftListPage({Key? key}) : super(key: key);
+  static const routeName = '/friends-gift-list';
 
   @override
   State<FriendsGiftListPage> createState() => _FriendsGiftListPageState();

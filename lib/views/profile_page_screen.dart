@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/views/create_edit_event_screen.dart';
+import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 
 class ProfilePage extends StatelessWidget {
+  static const routeName = '/profile';
   final Map<String, String> user = {
     'name': 'John Doe',
     'email': 'john.doe@example.com',
@@ -75,7 +78,7 @@ class ProfilePage extends StatelessWidget {
                   onPressed: () {
                     Navigator.pushNamed(
                       context,
-                      '/create-edit-event',
+                      CreateEditEventPage.routeName,
                       arguments: event, // Pass selected event data
                     );
                   },
@@ -88,7 +91,7 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              Navigator.pushNamed(context, '/pledged-gifts');
+              Navigator.pushNamed(context, MyPledgedGiftsPage.routeName);
             },
             child: const Text('View My Pledged Gifts'),
           ),

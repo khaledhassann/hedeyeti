@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
 import 'package:hedeyeti/utils/constants.dart';
+import 'package:hedeyeti/views/create_edit_gift_screen.dart';
 
 class MyPledgedGiftsPage extends StatelessWidget {
+  static const routeName = '/pledged-gifts';
   final List<Gift> pledgedGifts = EXAMPLE_PLEDGED_GIFTS;
 
   @override
@@ -45,7 +47,7 @@ class MyPledgedGiftsPage extends StatelessWidget {
                           // Navigate to Create/Edit Gift Page with gift data
                           Navigator.pushNamed(
                             context,
-                            '/create-edit-gift',
+                            CreateEditGiftPage.routeName,
                             arguments: {
                               'name': gift.name,
                               'description': gift.description,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Event.dart';
+import 'package:hedeyeti/views/create_edit_event_screen.dart';
+import 'package:hedeyeti/views/friend_gift_list_screen.dart';
 import '../widgets/deletion_confirmation_dialog.dart';
 import '../widgets/empty_list_message.dart';
 import '../widgets/event_card.dart';
@@ -33,7 +35,7 @@ class EventListPage extends StatelessWidget {
                   onTap: () {
                     Navigator.pushNamed(
                       context,
-                      '/friends-gift-list',
+                      FriendsGiftListPage.routeName,
                       arguments: {
                         'eventName': event.name,
                         'eventDate': event.formattedDate,
@@ -45,7 +47,7 @@ class EventListPage extends StatelessWidget {
                     if (value == 'Edit') {
                       Navigator.pushNamed(
                         context,
-                        '/create-edit-event',
+                        CreateEditEventPage.routeName,
                         arguments: event,
                       );
                     } else if (value == 'Delete') {

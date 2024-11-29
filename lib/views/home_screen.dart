@@ -3,8 +3,15 @@ import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/Gift.dart';
 import 'package:hedeyeti/models/User.dart';
 import 'package:hedeyeti/utils/constants.dart';
+import 'package:hedeyeti/views/create_edit_event_screen.dart';
+import 'package:hedeyeti/views/event_list_screen.dart';
+import 'package:hedeyeti/views/login_screen.dart';
+import 'package:hedeyeti/views/pledged_gifts_screen.dart';
+import 'package:hedeyeti/views/profile_page_screen.dart';
+import '../services/firebase_auth_service.dart';
 
 class HomePage extends StatelessWidget {
+  static const routeName = '/home';
   late final List<Gift> gifts;
   late final List<Event> events;
   late final List<User> exampleUsers;
@@ -95,17 +102,18 @@ class HomePage extends StatelessWidget {
               leading: const Icon(Icons.event),
               title: const Text('My Events'),
               onTap: () {
-                Navigator.pushNamed(context, '/events', arguments: {
-                  'name': 'Khaled Taha',
-                  'events': exampleUsers.first.events,
-                });
+                Navigator.pushNamed(context, EventListPage.routeName,
+                    arguments: {
+                      'name': 'Khaled Taha',
+                      'events': exampleUsers.first.events,
+                    });
               },
             ),
             ListTile(
               leading: const Icon(Icons.card_giftcard),
               title: const Text('My Pledged Gifts'),
               onTap: () {
-                Navigator.pushNamed(context, '/pledged-gifts');
+                Navigator.pushNamed(context, MyPledgedGiftsPage.routeName);
               },
             ),
             const Divider(),
@@ -113,14 +121,17 @@ class HomePage extends StatelessWidget {
               leading: const Icon(Icons.settings),
               title: const Text('Manage profile'),
               onTap: () {
-                Navigator.pushNamed(context, '/profile');
+                Navigator.pushNamed(context, ProfilePage.routeName);
               },
             ),
             ListTile(
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
-              onTap: () {
-                // TODO: Implement logout functionality
+              onTap: () async {
+                final authService = FirebaseAuthService();
+                await authService.logoutUser(); // Log out the user
+                Navigator.pushReplacementNamed(
+                    context, LoginScreen.routeName); // Navigate to login
               },
             ),
           ],
@@ -134,7 +145,7 @@ class HomePage extends StatelessWidget {
       padding: const EdgeInsets.all(16.0),
       child: ElevatedButton(
         onPressed: () {
-          Navigator.pushNamed(context, '/create-edit-event');
+          Navigator.pushNamed(context, CreateEditEventPage.routeName);
         },
         style: ElevatedButton.styleFrom(
           minimumSize: const Size(double.infinity, 50),
@@ -165,7 +176,7 @@ class HomePage extends StatelessWidget {
             onTap: () {
               Navigator.pushNamed(
                 context,
-                '/events',
+                EventListPage.routeName,
                 arguments: {'name': user.name, 'events': user.events},
               );
             },

@@ -3,6 +3,7 @@ import 'package:hedeyeti/models/Gift.dart';
 import '../widgets/gift_list_base.dart';
 
 class GiftListPage extends StatefulWidget {
+  static const routeName = '/gifts';
   const GiftListPage({Key? key}) : super(key: key);
 
   @override
