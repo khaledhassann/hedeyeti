@@ -1,11 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
-import 'package:hedeyeti/utils/constants.dart';
-import 'package:hedeyeti/views/create_edit_gift_screen.dart';
+import '../services/database_helper.dart';
+import '../views/create_edit_gift_screen.dart';
 
-class MyPledgedGiftsPage extends StatelessWidget {
+class MyPledgedGiftsPage extends StatefulWidget {
   static const routeName = '/pledged-gifts';
-  final List<Gift> pledgedGifts = EXAMPLE_PLEDGED_GIFTS;
+
+  @override
+  State<MyPledgedGiftsPage> createState() => _MyPledgedGiftsPageState();
+}
+
+class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
+  late List<Gift> pledgedGifts = []; // List of pledged gifts
+  final DatabaseHelper _dbHelper = DatabaseHelper(); // SQLite helper
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPledgedGifts(); // Load pledged gifts on initialization
+  }
+
+  /// Fetches all gifts with the status 'Pledged' from the database
+  Future<void> _loadPledgedGifts() async {
+    final giftMaps = await _dbHelper.getPledgedGifts(); // Query SQLite
+    setState(() {
+      pledgedGifts = giftMaps.map((giftMap) => Gift.fromMap(giftMap)).toList();
+    });
+  }
+
+  /// Confirms and cancels a gift pledge, updating the database
+  void _confirmCancel(BuildContext context, Gift gift) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Cancel Pledge'),
+          content: Text(
+              'Are you sure you want to cancel your pledge for "${gift.name}"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Update gift status in the database
+                gift.status = 'Available';
+                await _dbHelper.updateGift(gift.id!, gift.toMap());
+
+                // Reload the UI
+                _loadPledgedGifts();
+
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Pledge for "${gift.name}" canceled.'),
+                    backgroundColor: Colors.orange,
+                  ),
+                );
+              },
+              child: const Text('Yes', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +98,7 @@ class MyPledgedGiftsPage extends StatelessWidget {
                     ),
                     title: Text(gift.name),
                     subtitle: Text(
-                      '${gift.description}\nPrice: \$${gift.price}\nDue: ${EXAMPLE_EVENTS[0].formattedDate}',
+                      '${gift.description}\nPrice: \$${gift.price}',
                     ),
                     isThreeLine: true,
                     trailing: PopupMenuButton<String>(
@@ -49,18 +109,19 @@ class MyPledgedGiftsPage extends StatelessWidget {
                             context,
                             CreateEditGiftPage.routeName,
                             arguments: {
+                              'id': gift.id,
                               'name': gift.name,
                               'description': gift.description,
                               'price': gift.price,
                               'category': gift.category,
-                              'status': gift.status == 'Pending'
-                                  ? 'Available'
-                                  : 'Pledged',
+                              'status': gift.status,
+                              'eventId': gift.eventId,
                             },
-                          );
+                          ).then((_) =>
+                              _loadPledgedGifts()); // Reload gifts on return
                         } else if (value == 'Cancel') {
                           // Handle pledge cancellation
-                          _confirmCancel(context, gift.name);
+                          _confirmCancel(context, gift);
                         }
                       },
                       itemBuilder: (context) => [
@@ -78,32 +139,6 @@ class MyPledgedGiftsPage extends StatelessWidget {
                 );
               },
             ),
-    );
-  }
-
-  void _confirmCancel(BuildContext context, String giftName) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Cancel Pledge'),
-          content: Text(
-              'Are you sure you want to cancel your pledge for "$giftName"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('No'),
-            ),
-            TextButton(
-              onPressed: () {
-                // TODO: Implement cancellation logic
-                Navigator.of(ctx).pop();
-              },
-              child: const Text('Yes', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
     );
   }
 }

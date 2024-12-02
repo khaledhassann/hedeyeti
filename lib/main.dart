@@ -11,9 +11,9 @@ import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 import 'package:hedeyeti/views/profile_page_screen.dart';
 import 'package:hedeyeti/views/register_screen.dart';
 import 'package:hedeyeti/views/registration_journey.dart';
+import 'package:hedeyeti/views/splash_screen.dart';
 
 void main() async {
-  // firebse initialization
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(const MyApp());
@@ -22,17 +22,17 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: true, // remove for final screenshots
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: true,
+      title: 'Hedeyeti',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
       routes: {
+        SplashScreen.routeName: (context) => SplashScreen(),
         HomePage.routeName: (context) => HomePage(),
         LoginScreen.routeName: (context) => const LoginScreen(),
         RegistrationJourney.routeName: (context) => RegistrationJourney(),
@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
         CreateEditGiftPage.routeName: (context) => const CreateEditGiftPage(),
         FriendsGiftListPage.routeName: (context) => const FriendsGiftListPage(),
       },
-      initialRoute: '/login',
+      initialRoute: SplashScreen.routeName, // Start with Splash Screen
     );
   }
 }

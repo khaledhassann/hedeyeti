@@ -1,8 +1,10 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import '../widgets/event_category_dropdown.dart';
-
 import '../widgets/primary_button.dart';
 import '../widgets/reusable_text_field.dart';
+import '../services/database_helper.dart'; // Import the database helper class
 
 class CreateEditEventPage extends StatefulWidget {
   static const routeName = '/create-edit-event';
@@ -20,6 +22,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
   late TextEditingController _locationController;
   late TextEditingController _descriptionController;
   String _category = 'Birthday';
+  int? _eventId; // To track if editing an existing event
 
   @override
   void didChangeDependencies() {
@@ -28,6 +31,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     final args = ModalRoute.of(context)?.settings.arguments;
 
     if (args is Map<dynamic, dynamic>) {
+      _eventId = args['id']; // Get the ID if editing an existing event
       _nameController = TextEditingController(text: args['name'] ?? '');
       _dateController = TextEditingController(text: args['date'] ?? '');
       _locationController = TextEditingController(text: args['location'] ?? '');
@@ -66,8 +70,9 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     }
   }
 
-  void _saveEvent() {
+  Future<void> _saveEventToDatabase() async {
     if (_formKey.currentState!.validate()) {
+      final dbHelper = DatabaseHelper();
       final eventDetails = {
         'name': _nameController.text,
         'date': _dateController.text,
@@ -75,7 +80,26 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
         'description': _descriptionController.text,
         'category': _category,
       };
-      Navigator.pop(context, eventDetails);
+
+      if (_eventId == null) {
+        // Create new event
+        await dbHelper.insertEvent(eventDetails);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Event created successfully!'),
+              backgroundColor: Colors.green),
+        );
+      } else {
+        // Update existing event
+        await dbHelper.updateEvent(_eventId!, eventDetails);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Event updated successfully!'),
+              backgroundColor: Colors.green),
+        );
+      }
+
+      Navigator.pop(context); // Return to the previous screen
     }
   }
 
@@ -84,9 +108,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          ModalRoute.of(context)?.settings.arguments == null
-              ? 'Create Event'
-              : 'Edit Event',
+          _eventId == null ? 'Create Event' : 'Edit Event',
         ),
       ),
       body: Padding(
@@ -129,7 +151,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
               ),
               PrimaryButton(
                 text: 'Save Event',
-                onPressed: _saveEvent,
+                onPressed: _saveEventToDatabase,
                 snackbarMessage: 'Event saved successfully!',
                 snackbarColor: Colors.green,
               ),

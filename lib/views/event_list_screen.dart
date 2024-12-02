@@ -5,30 +5,68 @@ import 'package:hedeyeti/views/friend_gift_list_screen.dart';
 import '../widgets/deletion_confirmation_dialog.dart';
 import '../widgets/empty_list_message.dart';
 import '../widgets/event_card.dart';
+import '../services/database_helper.dart'; // Import DatabaseHelper
 
-class EventListPage extends StatelessWidget {
+class EventListPage extends StatefulWidget {
   static const routeName = '/events';
 
   @override
-  Widget build(BuildContext context) {
-    // Retrieve the passed arguments
+  State<EventListPage> createState() => _EventListPageState();
+}
+
+class _EventListPageState extends State<EventListPage> {
+  late String friendName;
+  List<Event> _events = [];
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadEvents();
+    });
+  }
+
+  void _loadEvents() async {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
-    final String friendName = args['name'] ?? 'Friend';
-    final List<Event> events = List<Event>.from(args['events'] ?? []);
+    friendName = args['name'] ?? 'Friend';
 
+    // Fetch events from the database
+    final eventMaps = await _dbHelper.getEventsForUser(friendName);
+
+    setState(() {
+      _events = eventMaps.map((e) => Event.fromMap(e)).toList();
+    });
+  }
+
+  Future<void> _deleteEvent(int eventId, int index) async {
+    await _dbHelper.deleteEvent(eventId);
+    setState(() {
+      _events.removeAt(index);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Event deleted successfully'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text("$friendName's Events"),
       ),
-      body: events.isEmpty
+      body: _events.isEmpty
           ? const EmptyListMessage(
               message: 'No events yet!',
             )
           : ListView.builder(
-              itemCount: events.length,
+              itemCount: _events.length,
               itemBuilder: (context, index) {
-                final event = events[index];
+                final event = _events[index];
 
                 return EventCard(
                   event: event,
@@ -48,10 +86,10 @@ class EventListPage extends StatelessWidget {
                       Navigator.pushNamed(
                         context,
                         CreateEditEventPage.routeName,
-                        arguments: event,
-                      );
+                        arguments: event.toMap(),
+                      ).then((_) => _loadEvents());
                     } else if (value == 'Delete') {
-                      _confirmDelete(context, event.name, index, events);
+                      _confirmDelete(context, event.id, event.name, index);
                     }
                   },
                 );
@@ -61,7 +99,14 @@ class EventListPage extends StatelessWidget {
   }
 
   void _confirmDelete(
-      BuildContext context, String eventName, int index, List events) {
+      BuildContext context, int? eventId, String eventName, int index) {
+    if (eventId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: Event ID is missing')),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (ctx) {
@@ -69,8 +114,8 @@ class EventListPage extends StatelessWidget {
           title: 'Delete Event',
           content: 'Are you sure you want to delete "$eventName"?',
           onConfirm: () {
-            events.removeAt(index); // Remove the event
-            (context as Element).markNeedsBuild(); // Rebuild the UI
+            _deleteEvent(eventId, index);
+            Navigator.pop(ctx);
           },
         );
       },

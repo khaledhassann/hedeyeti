@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/database_helper.dart';
 import '../widgets/reusable_text_field.dart';
 import '../widgets/gift_category_dropdown.dart';
 import '../widgets/primary_button.dart';
@@ -19,21 +20,25 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
   late TextEditingController _priceController;
   String _category = 'Electronics';
   bool _isPledged = false;
+  int? _giftId; // For editing
+  late int _eventId; // To link the gift to an event
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final gift =
+    final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _giftId = args?['id']; // Nullable for new gifts
+    _eventId = args?['eventId'] ?? 0; // Event ID must be passed
 
-    _nameController = TextEditingController(text: gift?['name'] ?? '');
+    _nameController = TextEditingController(text: args?['name'] ?? '');
     _descriptionController =
-        TextEditingController(text: gift?['description'] ?? '');
+        TextEditingController(text: args?['description'] ?? '');
     _priceController =
-        TextEditingController(text: gift?['price']?.toString() ?? '');
-    _category = gift?['category'] ?? 'Electronics';
-    _isPledged = gift?['status'] == 'Pledged';
+        TextEditingController(text: args?['price']?.toString() ?? '');
+    _category = args?['category'] ?? 'Electronics';
+    _isPledged = args?['status'] == 'Pledged';
   }
 
   @override
@@ -44,17 +49,37 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
     super.dispose();
   }
 
-  void _saveGift() {
+  Future<void> _saveGiftToDatabase() async {
     if (_formKey.currentState!.validate()) {
+      final dbHelper = DatabaseHelper();
       final giftDetails = {
         'name': _nameController.text,
         'description': _descriptionController.text,
         'price': double.tryParse(_priceController.text) ?? 0.0,
         'category': _category,
         'status': _isPledged ? 'Pledged' : 'Available',
+        'event_id': _eventId, // Link to the event
       };
 
-      Navigator.pop(context, giftDetails);
+      if (_giftId == null) {
+        // Insert new gift
+        await dbHelper.insertGift(giftDetails);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Gift added successfully!'),
+              backgroundColor: Colors.green),
+        );
+      } else {
+        // Update existing gift
+        await dbHelper.updateGift(_giftId!, giftDetails);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Gift updated successfully!'),
+              backgroundColor: Colors.green),
+        );
+      }
+
+      Navigator.pop(context); // Return to the previous screen
     }
   }
 
@@ -63,9 +88,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          ModalRoute.of(context)?.settings.arguments == null
-              ? 'Add Gift'
-              : 'Edit Gift',
+          _giftId == null ? 'Add Gift' : 'Edit Gift',
         ),
       ),
       body: Padding(
@@ -140,7 +163,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
               // Save Button
               PrimaryButton(
                 text: 'Save Gift',
-                onPressed: _saveGift,
+                onPressed: _saveGiftToDatabase,
                 snackbarMessage: 'Gift saved successfully!',
                 snackbarColor: Colors.green,
               ),

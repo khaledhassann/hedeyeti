@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
+import '../services/database_helper.dart';
 import '../widgets/gift_list_base.dart';
 
 class FriendsGiftListPage extends StatefulWidget {
@@ -11,34 +12,60 @@ class FriendsGiftListPage extends StatefulWidget {
 }
 
 class _FriendsGiftListPageState extends State<FriendsGiftListPage> {
-  late List<Gift> gifts;
-  late String eventName;
-  late String eventDate;
+  late List<Gift> gifts = []; // List of gifts for the event
+  late String eventName; // Name of the event
+  late String eventDate; // Date of the event
+  late int eventId; // ID of the event
+  final DatabaseHelper _dbHelper = DatabaseHelper(); // SQLite database helper
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
+    // Retrieve navigation arguments
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
 
-    eventName = args['eventName'] ?? 'Event';
-    eventDate = args['eventDate'] ?? 'Unknown Date';
-    gifts = List<Gift>.from(args['gifts'] ?? []);
+    eventName = args['eventName'] ?? 'Event'; // Event name
+    eventDate = args['eventDate'] ?? 'Unknown Date'; // Event date
+    eventId = args['eventId']; // Event ID (must be provided)
+
+    // Load gifts for this event from the database
+    _loadGifts();
   }
 
-  void _pledgeGift(int index) {
+  /// Fetches gifts for the given event ID from the SQLite database
+  Future<void> _loadGifts() async {
+    final giftMaps =
+        await _dbHelper.getGiftsForEvent(eventId); // Query gifts by eventId
     setState(() {
-      gifts[index].status = 'Pledged';
+      gifts = giftMaps.map((giftMap) => Gift.fromMap(giftMap)).toList();
+    });
+  }
+
+  /// Updates the gift's status to 'Pledged' and persists the change in SQLite
+  Future<void> _pledgeGift(int index) async {
+    final gift = gifts[index];
+    gift.status = 'Pledged';
+
+    // Update the database with the new status
+    await _dbHelper.updateGift(gift.id!, gift.toMap());
+
+    // Update the UI
+    setState(() {
+      gifts[index] = gift;
     });
 
+    // Notify the user
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('You pledged to buy "${gifts[index].name}"'),
+        backgroundColor: Colors.green,
       ),
     );
   }
 
+  /// Sorts the gifts list based on the selected criteria
   void _sortGifts(String sortBy) {
     setState(() {
       if (sortBy == 'Name') {
@@ -56,7 +83,7 @@ class _FriendsGiftListPageState extends State<FriendsGiftListPage> {
     return GiftListBase(
       title: '$eventName Gifts',
       gifts: gifts,
-      canPledge: true,
+      canPledge: true, // Allow pledging gifts
       onPledgeGift: _pledgeGift,
       onSort: _sortGifts,
     );

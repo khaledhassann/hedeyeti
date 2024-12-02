@@ -18,25 +18,41 @@ class _GiftListPageState extends State<GiftListPage> {
     super.initState();
     gifts = [
       Gift(
-          name: "Smartphone",
-          category: 'Electronics',
-          price: 799.99,
-          status: 'Available'),
+        id: null, // New gifts initially have no ID
+        name: "Smartphone",
+        category: 'Electronics',
+        price: 799.99,
+        status: 'Available',
+        description: "A high-end smartphone with great features.",
+        eventId: 1, // Replace with the actual event ID
+      ),
       Gift(
-          name: 'Blender',
-          category: 'Home Appliances',
-          price: 149.99,
-          status: 'Available'),
+        id: null,
+        name: 'Blender',
+        category: 'Home Appliances',
+        price: 149.99,
+        status: 'Available',
+        description: "A durable blender for your kitchen.",
+        eventId: 1,
+      ),
       Gift(
-          name: 'Laptop',
-          category: 'Electronics',
-          price: 1499.75,
-          status: 'Pledged'),
+        id: null,
+        name: 'Laptop',
+        category: 'Electronics',
+        price: 1499.75,
+        status: 'Pledged',
+        description: "A powerful laptop for work and play.",
+        eventId: 1,
+      ),
       Gift(
-          name: 'Flutter for Beginners',
-          category: 'Books',
-          price: 24.99,
-          status: 'Available'),
+        id: null,
+        name: 'Flutter for Beginners',
+        category: 'Books',
+        price: 24.99,
+        status: 'Available',
+        description: "An excellent book for learning Flutter.",
+        eventId: 1,
+      ),
     ];
   }
 

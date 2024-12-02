@@ -1,23 +1,43 @@
-// ignore_for_file: prefer_final_fields
-
-import 'package:hedeyeti/models/Gift.dart';
+import 'Gift.dart';
 
 class Event {
+  int? id; // Primary key for SQLite
   String name;
-  DateTime _date;
+  DateTime date;
   String category;
   List<Gift> gifts;
 
   Event({
+    this.id, // Nullable to handle new events
     required this.name,
-    required DateTime date,
+    required this.date,
     required this.category,
     required this.gifts,
-  }) : _date = date;
+  });
 
-  // Custom getter to return only the date part
-  DateTime get date => DateTime(_date.year, _date.month, _date.day);
-
+  // Custom getter to return formatted date
   String get formattedDate =>
-      "${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}";
+      "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+  // Convert Event to a Map for SQLite
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'date': date.toIso8601String(),
+      'category': category,
+      // Exclude gifts as they should be stored in their own table
+    };
+  }
+
+  // Create an Event from a Map
+  factory Event.fromMap(Map<String, dynamic> map) {
+    return Event(
+      id: map['id'],
+      name: map['name'],
+      date: DateTime.parse(map['date']),
+      category: map['category'],
+      gifts: [], // Gifts should be fetched separately
+    );
+  }
 }
