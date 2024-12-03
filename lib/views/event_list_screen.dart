@@ -1,4 +1,6 @@
+// EventListPage.dart
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Ensure Firestore is imported
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/friend_gift_list_screen.dart';
@@ -10,12 +12,15 @@ import '../services/database_helper.dart'; // Import DatabaseHelper
 class EventListPage extends StatefulWidget {
   static const routeName = '/events';
 
+  const EventListPage({Key? key}) : super(key: key);
+
   @override
   State<EventListPage> createState() => _EventListPageState();
 }
 
 class _EventListPageState extends State<EventListPage> {
-  late String friendName;
+  late String friendId; // Changed from friendName to friendId
+  late String friendName; // Retain friendName for display
   List<Event> _events = [];
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
@@ -27,20 +32,38 @@ class _EventListPageState extends State<EventListPage> {
     });
   }
 
+  /// Fetches the events for the specified friend from the local SQLite database.
   void _loadEvents() async {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>;
-    friendName = args['name'] ?? 'Friend';
+    final args = ModalRoute.of(context)?.settings.arguments;
 
-    // Fetch events from the database
-    final eventMaps = await _dbHelper.getEventsForUser(friendName);
+    if (args is Map<String, dynamic>) {
+      friendId = args['id'] as String? ?? '';
+      friendName = args['name'] as String? ?? 'Friend';
 
-    setState(() {
-      _events = eventMaps.map((e) => Event.fromMap(e)).toList();
-    });
+      if (friendId.isEmpty) {
+        // Handle missing friendId
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Friend ID is missing')),
+        );
+        return;
+      }
+
+      // Fetch events from the database using friendId
+      final eventMaps = await _dbHelper.getEventsForUser(friendId);
+
+      setState(() {
+        _events = eventMaps.map((e) => Event.fromMap(e)).toList();
+      });
+    } else {
+      // Handle invalid arguments
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error: Invalid arguments')),
+      );
+    }
   }
 
-  Future<void> _deleteEvent(int eventId, int index) async {
+  /// Deletes an event and updates the UI accordingly.
+  Future<void> _deleteEvent(String eventId, int index) async {
     await _dbHelper.deleteEvent(eventId);
     setState(() {
       _events.removeAt(index);
@@ -74,11 +97,7 @@ class _EventListPageState extends State<EventListPage> {
                     Navigator.pushNamed(
                       context,
                       FriendsGiftListPage.routeName,
-                      arguments: {
-                        'eventName': event.name,
-                        'eventDate': event.formattedDate,
-                        'gifts': event.gifts,
-                      },
+                      arguments: event.gifts, // Pass the entire Event object
                     );
                   },
                   onPopupSelected: (value) {
@@ -86,7 +105,7 @@ class _EventListPageState extends State<EventListPage> {
                       Navigator.pushNamed(
                         context,
                         CreateEditEventPage.routeName,
-                        arguments: event.toMap(),
+                        arguments: event, // Pass the entire Event object
                       ).then((_) => _loadEvents());
                     } else if (value == 'Delete') {
                       _confirmDelete(context, event.id, event.name, index);
@@ -98,9 +117,10 @@ class _EventListPageState extends State<EventListPage> {
     );
   }
 
+  /// Shows a confirmation dialog before deleting an event.
   void _confirmDelete(
-      BuildContext context, int? eventId, String eventName, int index) {
-    if (eventId == null) {
+      BuildContext context, String? eventId, String eventName, int index) {
+    if (eventId == null || eventId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error: Event ID is missing')),
       );

@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _showError(e.code);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An error occurred. Please try again.')),
+          SnackBar(content: Text('An error occurred. Please try again. {$e}')),
         );
       } finally {
         setState(() {

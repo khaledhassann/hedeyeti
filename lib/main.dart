@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
         RegistrationJourney.routeName: (context) => RegistrationJourney(),
         RegisterScreen.routeName: (context) => const RegisterScreen(),
         EventListPage.routeName: (context) => EventListPage(),
-        GiftListPage.routeName: (context) => const GiftListPage(),
+        // GiftListPage.routeName: (context) => const GiftListPage(),
         ProfilePage.routeName: (context) => ProfilePage(),
         MyPledgedGiftsPage.routeName: (context) => MyPledgedGiftsPage(),
         CreateEditEventPage.routeName: (context) => const CreateEditEventPage(),

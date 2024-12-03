@@ -20,7 +20,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
   late TextEditingController _priceController;
   String _category = 'Electronics';
   bool _isPledged = false;
-  int? _giftId; // For editing
+  String? _giftId; // For editing
   late int _eventId; // To link the gift to an event
   late int _loggedInUserId; // Logged-in user's ID (set dynamically)
 

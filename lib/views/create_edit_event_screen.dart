@@ -22,7 +22,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
   late TextEditingController _locationController;
   late TextEditingController _descriptionController;
   String _category = 'Birthday';
-  int? _eventId; // To track if editing an existing event
+  String? _eventId; // To track if editing an existing event
 
   @override
   void didChangeDependencies() {

@@ -13,7 +13,7 @@ class MyPledgedGiftsPage extends StatefulWidget {
 class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
   late Future<List<Gift>> _pledgedGiftsFuture; // Future for pledged gifts
   final DatabaseHelper _dbHelper = DatabaseHelper(); // SQLite helper
-  late int _loggedInUserId; // Logged-in user's ID
+  late String _loggedInUserId; // Logged-in user's ID
 
   @override
   void didChangeDependencies() {

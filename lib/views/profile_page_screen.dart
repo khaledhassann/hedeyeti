@@ -27,12 +27,12 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _loadProfileData() async {
     // Fetch user info (assuming single user for simplicity)
     final userData = await _dbHelper.getUser();
-    final eventData = await _dbHelper.getUserEvents(userData['id']);
+    final eventData = await _dbHelper.getEventsForUser(userData.id);
 
     setState(() {
       user = {
-        'name': userData['name'],
-        'email': userData['email'],
+        'name': userData.name,
+        'email': userData.email,
       };
       events = eventData;
     });

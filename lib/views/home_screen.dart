@@ -1,26 +1,83 @@
+// HomePage.dart
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // Ensure Firestore is imported
 import 'package:hedeyeti/models/Event.dart';
-import 'package:hedeyeti/models/Gift.dart';
 import 'package:hedeyeti/models/User.dart';
-import 'package:hedeyeti/utils/constants.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/event_list_screen.dart';
 import 'package:hedeyeti/views/login_screen.dart';
 import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 import 'package:hedeyeti/views/profile_page_screen.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/database_helper.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   static const routeName = '/home';
-  late final List<Gift> gifts;
-  late final List<Event> events;
-  late final List<User> exampleUsers;
 
-  HomePage({Key? key}) : super(key: key) {
-    // initialization with example lists
-    gifts = EXAMPLE_GIFTS;
-    events = EXAMPLE_EVENTS;
-    exampleUsers = EXAMPLE_USERS;
+  const HomePage({Key? key}) : super(key: key);
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  late Future<User> _userFuture; // Fetch logged-in user's data
+  late Future<List<User>> _friendsFuture; // Fetch friends' data
+
+  @override
+  void initState() {
+    super.initState();
+    _userFuture = _fetchLoggedInUser();
+    _friendsFuture = _fetchFriends();
+  }
+
+  /// Fetches the logged-in user's data from the local SQLite database.
+  Future<User> _fetchLoggedInUser() async {
+    try {
+      final userData =
+          await _dbHelper.getUser(); // Now returns a User with String ID
+      return userData;
+    } catch (e) {
+      print('Error fetching logged-in user: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetches the list of friends from Firestore based on friend IDs stored in SQLite.
+  Future<List<User>> _fetchFriends() async {
+    try {
+      // Fetch the logged-in user
+      final currentUser = await _dbHelper.getUser();
+      final userId = currentUser.id; // Now a String
+
+      // Fetch friend IDs (List<String>)
+      final friendIds = await _dbHelper.getFriends(userId);
+      final firestore = FirebaseFirestore.instance;
+
+      // Fetch all friends' data in parallel
+      final futures = friendIds.map((firestoreId) async {
+        try {
+          final doc =
+              await firestore.collection('users').doc(firestoreId).get();
+          if (doc.exists && doc.data() != null) {
+            return User.fromFirestore(doc.data()!, doc.id);
+          } else {
+            print('Friend with id $firestoreId does not exist in Firestore.');
+            return null;
+          }
+        } catch (e) {
+          print('Error fetching friend with id $firestoreId: $e');
+          return null;
+        }
+      }).toList();
+
+      final friendsData = await Future.wait(futures);
+      return friendsData.whereType<User>().toList();
+    } catch (e) {
+      print('Error fetching friends: $e');
+      return [];
+    }
   }
 
   @override
@@ -53,17 +110,59 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      drawer: _buildDrawer(context),
+      drawer: FutureBuilder<User>(
+        future: _userFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Drawer(
+              child: Center(child: CircularProgressIndicator()),
+            );
+          } else if (snapshot.hasError || snapshot.data == null) {
+            return const Drawer(
+              child: Center(child: Text('Failed to load user data.')),
+            );
+          }
+
+          final user = snapshot.data!;
+          return _buildDrawer(context, user);
+        },
+      ),
       body: Column(
         children: [
           _buildCreateEventButton(context),
-          _buildFriendsList(),
+          FutureBuilder<List<User>>(
+            future: _friendsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Expanded(
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              } else if (snapshot.hasError) {
+                return const Expanded(
+                  child: Center(child: Text('Failed to load friends data.')),
+                );
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Expanded(
+                  child: Center(
+                    child: Text(
+                      'No friends yet. Add some to see their events!',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  ),
+                );
+              }
+
+              final friends = snapshot.data!;
+              return _buildFriendsList(friends);
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  /// Builds the navigation drawer with user information and navigation options.
+  Widget _buildDrawer(BuildContext context, User user) {
     return Drawer(
       child: SingleChildScrollView(
         child: Column(
@@ -73,27 +172,24 @@ class HomePage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Theme.of(context).primaryColor,
               ),
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Flexible(
-                    child: CircleAvatar(
-                      radius: 40,
-                      backgroundImage: AssetImage('assets/images.png'),
-                    ),
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundImage: user.profilePicture.isNotEmpty
+                        ? NetworkImage(user.profilePicture)
+                        : const AssetImage('assets/default-avatar.png')
+                            as ImageProvider,
                   ),
-                  SizedBox(height: 10),
-                  FittedBox(
-                    child: Text(
-                      'Khaled Taha',
-                      style: TextStyle(color: Colors.white, fontSize: 18),
-                    ),
+                  const SizedBox(height: 10),
+                  Text(
+                    user.name,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
                   ),
-                  FittedBox(
-                    child: Text(
-                      'khaled@email.com',
-                      style: TextStyle(color: Colors.white70),
-                    ),
+                  Text(
+                    user.email,
+                    style: const TextStyle(color: Colors.white70),
                   ),
                 ],
               ),
@@ -102,11 +198,14 @@ class HomePage extends StatelessWidget {
               leading: const Icon(Icons.event),
               title: const Text('My Events'),
               onTap: () {
-                Navigator.pushNamed(context, EventListPage.routeName,
-                    arguments: {
-                      'name': 'Khaled Taha',
-                      'events': exampleUsers.first.events,
-                    });
+                Navigator.pushNamed(
+                  context,
+                  EventListPage.routeName,
+                  arguments: {
+                    'name': user.name,
+                    'events': user.events,
+                  },
+                );
               },
             ),
             ListTile(
@@ -129,9 +228,8 @@ class HomePage extends StatelessWidget {
               title: const Text('Logout'),
               onTap: () async {
                 final authService = FirebaseAuthService();
-                await authService.logoutUser(); // Log out the user
-                Navigator.pushReplacementNamed(
-                    context, LoginScreen.routeName); // Navigate to login
+                await authService.logoutUser();
+                Navigator.pushReplacementNamed(context, LoginScreen.routeName);
               },
             ),
           ],
@@ -140,6 +238,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  /// Builds the button to navigate to the event creation/editing screen.
   Widget _buildCreateEventButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -155,21 +254,24 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildFriendsList() {
+  /// Builds the list of friends fetched from Firestore.
+  Widget _buildFriendsList(List<User> friends) {
     return Expanded(
       child: ListView.builder(
-        itemCount: exampleUsers.length,
+        itemCount: friends.length,
         itemBuilder: (context, index) {
-          final user = exampleUsers[index];
-          if (user.isMe) return const SizedBox();
+          final friend = friends[index];
           return ListTile(
             leading: CircleAvatar(
-              backgroundImage: AssetImage(user.profilePicture),
+              backgroundImage: friend.profilePicture.isNotEmpty
+                  ? NetworkImage(friend.profilePicture)
+                  : const AssetImage('assets/default-avatar.png')
+                      as ImageProvider,
             ),
-            title: Text(user.name),
+            title: Text(friend.name),
             subtitle: Text(
-              user.events.isNotEmpty
-                  ? 'Upcoming Events: ${user.events.length}'
+              friend.events.isNotEmpty
+                  ? 'Upcoming Events: ${friend.events.length}'
                   : 'No Upcoming Events',
             ),
             trailing: const Icon(Icons.chevron_right),
@@ -177,7 +279,7 @@ class HomePage extends StatelessWidget {
               Navigator.pushNamed(
                 context,
                 EventListPage.routeName,
-                arguments: {'name': user.name, 'events': user.events},
+                arguments: {'name': friend.name, 'events': friend.events},
               );
             },
           );

@@ -1,15 +1,16 @@
-import 'Event.dart';
+// User.dart
+import 'package:hedeyeti/models/Event.dart';
 
 class User {
-  int? id; // Primary key for SQLite
-  String name;
-  String email;
-  String profilePicture;
-  bool isMe;
-  List<Event> events;
+  final String id; // Unified ID as a String (Firestore ID)
+  final String name;
+  final String email;
+  final String profilePicture;
+  final bool isMe;
+  final List<Event> events;
 
   User({
-    this.id, // Nullable for new users
+    required this.id,
     required this.name,
     required this.email,
     required this.profilePicture,
@@ -17,26 +18,47 @@ class User {
     required this.events,
   });
 
-  // Convert User to a Map for SQLite
-  Map<String, dynamic> toMap() {
+  // Parse from SQLite map
+  factory User.fromSQLite(Map<String, dynamic> map) {
+    return User(
+      id: map['id'] as String, // Now a String
+      name: map['name'] ?? 'Unknown User',
+      email: map['email'] ?? 'No Email',
+      profilePicture: map['profilePicture'] ?? 'assets/default-avatar.png',
+      isMe: map['isMe'] == 1, // SQLite stores booleans as integers
+      events: [], // Populate from SQLite or Firestore later
+    );
+  }
+
+  // Parse from Firestore document
+  factory User.fromFirestore(Map<String, dynamic> map, String id) {
+    return User(
+      id: id, // Directly use Firestore ID as String
+      name: map['name'] ?? 'Unknown User',
+      email: map['email'] ?? 'No Email',
+      profilePicture: map['profilePicture'] ?? 'assets/default-avatar.png',
+      isMe: false, // Firestore users are friends, not the logged-in user
+      events: [], // Populate events separately
+    );
+  }
+
+  // Convert to SQLite map
+  Map<String, dynamic> toSQLite() {
     return {
-      'id': id,
+      'id': id, // Now a String
       'name': name,
       'email': email,
-      'profile_picture': profilePicture,
-      'is_me': isMe ? 1 : 0, // Store as integer (SQLite does not have boolean)
+      'profilePicture': profilePicture,
+      'isMe': isMe ? 1 : 0, // Store booleans as integers
     };
   }
 
-  // Create a User from a Map
-  factory User.fromMap(Map<String, dynamic> map) {
-    return User(
-      id: map['id'],
-      name: map['name'],
-      email: map['email'],
-      profilePicture: map['profile_picture'],
-      isMe: map['is_me'] == 1,
-      events: [], // Events should be fetched separately
-    );
+  // Convert to Firestore map
+  Map<String, dynamic> toFirestore() {
+    return {
+      'name': name,
+      'email': email,
+      'profilePicture': profilePicture,
+    };
   }
 }
