@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
+import '../services/database_helper.dart';
 import '../widgets/gift_list_base.dart';
+import '../views/create_edit_gift_screen.dart';
 
 class GiftListPage extends StatefulWidget {
   static const routeName = '/gifts';
@@ -11,66 +13,76 @@ class GiftListPage extends StatefulWidget {
 }
 
 class _GiftListPageState extends State<GiftListPage> {
-  late List<Gift> gifts;
+  late Future<List<Gift>> _giftsFuture;
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  late int _eventId; // Event ID passed to this screen
+  late int _loggedInUserId; // User ID passed to this screen
 
   @override
-  void initState() {
-    super.initState();
-    gifts = [
-      Gift(
-        id: null, // New gifts initially have no ID
-        name: "Smartphone",
-        category: 'Electronics',
-        price: 799.99,
-        status: 'Available',
-        description: "A high-end smartphone with great features.",
-        eventId: 1, // Replace with the actual event ID
-      ),
-      Gift(
-        id: null,
-        name: 'Blender',
-        category: 'Home Appliances',
-        price: 149.99,
-        status: 'Available',
-        description: "A durable blender for your kitchen.",
-        eventId: 1,
-      ),
-      Gift(
-        id: null,
-        name: 'Laptop',
-        category: 'Electronics',
-        price: 1499.75,
-        status: 'Pledged',
-        description: "A powerful laptop for work and play.",
-        eventId: 1,
-      ),
-      Gift(
-        id: null,
-        name: 'Flutter for Beginners',
-        category: 'Books',
-        price: 24.99,
-        status: 'Available',
-        description: "An excellent book for learning Flutter.",
-        eventId: 1,
-      ),
-    ];
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Retrieve arguments from navigation
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _eventId = args?['eventId'] ?? 0; // Event ID is required
+    _loggedInUserId =
+        args?['loggedInUserId'] ?? 0; // Logged-in user ID is required
+
+    // Fetch gifts for the given event
+    _giftsFuture = _fetchGifts();
   }
 
-  void _addGift() {
-    // Navigate to add gift screen
+  Future<List<Gift>> _fetchGifts() async {
+    final giftMaps = await _dbHelper.getGiftsForEvent(_eventId);
+    return giftMaps.map((map) => Gift.fromMap(map)).toList();
   }
 
-  void _editGift(int index) {
-    // Navigate to edit gift screen with gift data
+  void _addGift() async {
+    final result = await Navigator.pushNamed(
+      context,
+      CreateEditGiftPage.routeName,
+      arguments: {'eventId': _eventId, 'loggedInUserId': _loggedInUserId},
+    );
+
+    if (result != null) {
+      setState(() {
+        _giftsFuture = _fetchGifts();
+      });
+    }
   }
 
-  void _deleteGift(int index) {
+  void _editGift(int index, Gift gift) async {
+    final result = await Navigator.pushNamed(
+      context,
+      CreateEditGiftPage.routeName,
+      arguments: {
+        'id': gift.id,
+        'name': gift.name,
+        'description': gift.description,
+        'price': gift.price,
+        'category': gift.category,
+        'status': gift.status,
+        'eventId': _eventId,
+        'loggedInUserId': _loggedInUserId,
+      },
+    );
+
+    if (result != null) {
+      setState(() {
+        _giftsFuture = _fetchGifts();
+      });
+    }
+  }
+
+  void _deleteGift(int giftId) async {
+    await _dbHelper.deleteGift(giftId);
     setState(() {
-      gifts.removeAt(index);
+      _giftsFuture = _fetchGifts();
     });
   }
 
-  void _sortGifts(String sortBy) {
+  void _sortGifts(String sortBy, List<Gift> gifts) {
     setState(() {
       if (sortBy == 'Name') {
         gifts.sort((a, b) => a.name.compareTo(b.name));
@@ -84,15 +96,33 @@ class _GiftListPageState extends State<GiftListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return GiftListBase(
-      title: 'Event Gifts',
-      gifts: gifts,
-      canEdit: true,
-      showAddButton: true,
-      onAddGift: _addGift,
-      onEditGift: _editGift,
-      onDeleteGift: _deleteGift,
-      onSort: _sortGifts,
+    return FutureBuilder<List<Gift>>(
+      future: _giftsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return const Center(
+            child: Text('Failed to load gifts. Please try again later.'),
+          );
+        } else if (snapshot.data == null || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Text('No gifts available for this event.'),
+          );
+        } else {
+          final gifts = snapshot.data!;
+          return GiftListBase(
+            title: 'Event Gifts',
+            gifts: gifts,
+            canEdit: true,
+            showAddButton: true,
+            onAddGift: _addGift,
+            onEditGift: (index) => _editGift(index, gifts[index]),
+            onDeleteGift: (index) => _deleteGift(gifts[index].id!),
+            onSort: (sortBy) => _sortGifts(sortBy, gifts),
+          );
+        }
+      },
     );
   }
 }

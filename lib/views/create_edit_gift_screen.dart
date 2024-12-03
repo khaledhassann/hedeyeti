@@ -22,16 +22,21 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
   bool _isPledged = false;
   int? _giftId; // For editing
   late int _eventId; // To link the gift to an event
+  late int _loggedInUserId; // Logged-in user's ID (set dynamically)
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
+    // Retrieve arguments from route
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     _giftId = args?['id']; // Nullable for new gifts
     _eventId = args?['eventId'] ?? 0; // Event ID must be passed
+    _loggedInUserId =
+        args?['loggedInUserId'] ?? 0; // User ID passed from context
 
+    // Initialize controllers with existing data if editing
     _nameController = TextEditingController(text: args?['name'] ?? '');
     _descriptionController =
         TextEditingController(text: args?['description'] ?? '');
@@ -59,6 +64,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
         'category': _category,
         'status': _isPledged ? 'Pledged' : 'Available',
         'event_id': _eventId, // Link to the event
+        'pledger_id': _isPledged ? _loggedInUserId : null, // Set if pledged
       };
 
       if (_giftId == null) {
@@ -66,16 +72,18 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
         await dbHelper.insertGift(giftDetails);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Gift added successfully!'),
-              backgroundColor: Colors.green),
+            content: Text('Gift added successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
       } else {
         // Update existing gift
         await dbHelper.updateGift(_giftId!, giftDetails);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Gift updated successfully!'),
-              backgroundColor: Colors.green),
+            content: Text('Gift updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
 

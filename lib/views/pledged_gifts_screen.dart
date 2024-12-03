@@ -11,21 +11,27 @@ class MyPledgedGiftsPage extends StatefulWidget {
 }
 
 class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
-  late List<Gift> pledgedGifts = []; // List of pledged gifts
+  late Future<List<Gift>> _pledgedGiftsFuture; // Future for pledged gifts
   final DatabaseHelper _dbHelper = DatabaseHelper(); // SQLite helper
+  late int _loggedInUserId; // Logged-in user's ID
 
   @override
-  void initState() {
-    super.initState();
-    _loadPledgedGifts(); // Load pledged gifts on initialization
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Retrieve the logged-in user's ID from the route arguments
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    _loggedInUserId = args?['loggedInUserId'] ?? 0;
+
+    // Load pledged gifts for the user
+    _pledgedGiftsFuture = _loadPledgedGifts();
   }
 
-  /// Fetches all gifts with the status 'Pledged' from the database
-  Future<void> _loadPledgedGifts() async {
-    final giftMaps = await _dbHelper.getPledgedGifts(); // Query SQLite
-    setState(() {
-      pledgedGifts = giftMaps.map((giftMap) => Gift.fromMap(giftMap)).toList();
-    });
+  /// Fetches all gifts pledged by the logged-in user
+  Future<List<Gift>> _loadPledgedGifts() async {
+    final giftMaps = await _dbHelper.getGiftsPledgedByUser(_loggedInUserId);
+    return giftMaps.map((giftMap) => Gift.fromMap(giftMap)).toList();
   }
 
   /// Confirms and cancels a gift pledge, updating the database
@@ -46,10 +52,13 @@ class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
               onPressed: () async {
                 // Update gift status in the database
                 gift.status = 'Available';
+                gift.pledgerId = null; // Remove the pledger ID
                 await _dbHelper.updateGift(gift.id!, gift.toMap());
 
                 // Reload the UI
-                _loadPledgedGifts();
+                setState(() {
+                  _pledgedGiftsFuture = _loadPledgedGifts();
+                });
 
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -73,14 +82,25 @@ class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
       appBar: AppBar(
         title: const Text('My Pledged Gifts'),
       ),
-      body: pledgedGifts.isEmpty
-          ? const Center(
+      body: FutureBuilder<List<Gift>>(
+        future: _pledgedGiftsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return const Center(
+              child: Text('Failed to load pledged gifts. Please try again.'),
+            );
+          } else if (snapshot.data == null || snapshot.data!.isEmpty) {
+            return const Center(
               child: Text(
                 'No pledged gifts yet.',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
-            )
-          : ListView.builder(
+            );
+          } else {
+            final pledgedGifts = snapshot.data!;
+            return ListView.builder(
               itemCount: pledgedGifts.length,
               itemBuilder: (context, index) {
                 final gift = pledgedGifts[index];
@@ -116,9 +136,13 @@ class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
                               'category': gift.category,
                               'status': gift.status,
                               'eventId': gift.eventId,
+                              'loggedInUserId': _loggedInUserId,
                             },
-                          ).then((_) =>
-                              _loadPledgedGifts()); // Reload gifts on return
+                          ).then((_) {
+                            setState(() {
+                              _pledgedGiftsFuture = _loadPledgedGifts();
+                            });
+                          });
                         } else if (value == 'Cancel') {
                           // Handle pledge cancellation
                           _confirmCancel(context, gift);
@@ -138,7 +162,10 @@ class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
                   ),
                 );
               },
-            ),
+            );
+          }
+        },
+      ),
     );
   }
 }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hedeyeti/views/home_screen.dart';
+import 'package:hedeyeti/views/login_screen.dart';
 
 class RegistrationJourney extends StatefulWidget {
   static const routeName = '/registration-journey';
@@ -25,6 +28,9 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
   bool _isLoading = false;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  late String _userId; // To store the registered user's ID
 
   void _nextStep() async {
     if (_currentStep == 0 && _formKeyStep1.currentState!.validate()) {
@@ -34,10 +40,23 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
 
       try {
         // Firebase Auth: Register user with email and password
-        await _auth.createUserWithEmailAndPassword(
+        final UserCredential userCredential =
+            await _auth.createUserWithEmailAndPassword(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+
+        _userId = userCredential.user!.uid;
+
+        // Save initial user data to Firestore
+        await _firestore.collection('users').doc(_userId).set({
+          'name': '',
+          'email': _emailController.text.trim(),
+          'preferences': {
+            'notificationEmail': true,
+            'notificationPush': true,
+          },
+        });
 
         // Proceed to the next step
         setState(() {
@@ -82,6 +101,32 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
     }
   }
 
+  Future<void> _completeRegistration() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Update additional user details in Firestore
+      await _firestore.collection('users').doc(_userId).update({
+        'name': _nameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'address': _addressController.text.trim(),
+      });
+
+      // Navigate to home or the next screen
+      Navigator.pushReplacementNamed(context, HomePage.routeName);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to complete registration.')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   void _prevStep() {
     if (_currentStep > 0) {
       setState(() {
@@ -92,18 +137,6 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
         curve: Curves.easeInOut,
       );
     }
-  }
-
-  void _completeRegistration() {
-    final userData = {
-      'name': _nameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'phone': _phoneController.text.trim(),
-      'address': _addressController.text.trim(),
-    };
-
-    print('User Data: $userData');
-    Navigator.pushReplacementNamed(context, '/home');
   }
 
   @override
@@ -150,7 +183,7 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                        if (!RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(value)) {
                           return 'Please enter a valid email address';
                         }
                         return null;
@@ -179,7 +212,8 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/login');
+                        Navigator.pushReplacementNamed(
+                            context, LoginScreen.routeName);
                       },
                       child: const Text('Already have an account? Login'),
                     ),
