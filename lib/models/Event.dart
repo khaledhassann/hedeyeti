@@ -1,5 +1,4 @@
 // Event.dart
-import 'Gift.dart';
 
 class Event {
   String id; // Unified ID as a String (Firestore ID)
@@ -8,7 +7,7 @@ class Event {
   String category;
   String location;
   String description;
-  List<Gift> gifts;
+  String userId;
 
   Event({
     required this.id, // Now required and non-nullable
@@ -17,7 +16,7 @@ class Event {
     required this.category,
     required this.location,
     required this.description,
-    required this.gifts,
+    required this.userId,
   });
 
   /// Getter for formatted date
@@ -34,7 +33,7 @@ class Event {
       location: map['location'] as String? ?? 'No Location', // Handle null
       description:
           map['description'] as String? ?? 'No Description', // Handle null
-      gifts: [], // Populate this list as needed
+      userId: map['userId'] as String,
     );
   }
 
@@ -48,7 +47,7 @@ class Event {
       location: map['location'] as String? ?? 'No Location', // Handle null
       description:
           map['description'] as String? ?? 'No Description', // Handle null
-      gifts: [], // Gifts should be fetched separately
+      userId: map['userId'] as String,
     );
   }
 
@@ -62,7 +61,7 @@ class Event {
       location: map['location'] as String? ?? 'No Location', // Handle null
       description:
           map['description'] as String? ?? 'No Description', // Handle null
-      gifts: [], // Fetch gifts separately
+      userId: map['userId'] as String,
     );
   }
 

@@ -1,6 +1,6 @@
 // DatabaseHelper.dart
+// THIS FILE WILL HOST ANYTHING RELATED TO THE SQLITE IMPLEMENTATION
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 

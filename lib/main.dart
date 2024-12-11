@@ -1,5 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/create_edit_gift_screen.dart';
 import 'package:hedeyeti/views/event_list_screen.dart';
@@ -13,9 +15,12 @@ import 'package:hedeyeti/views/register_screen.dart';
 import 'package:hedeyeti/views/registration_journey.dart';
 import 'package:hedeyeti/views/splash_screen.dart';
 
+// final getIt = GetIt.instance;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  // Register FirebaseHelper singleton
+  // getIt.registerSingleton<FirebaseHelper>(FirebaseHelper());
   runApp(const MyApp());
 }
 

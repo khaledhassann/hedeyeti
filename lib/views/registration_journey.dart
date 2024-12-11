@@ -52,10 +52,7 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
         await _firestore.collection('users').doc(_userId).set({
           'name': '',
           'email': _emailController.text.trim(),
-          'preferences': {
-            'notificationEmail': true,
-            'notificationPush': true,
-          },
+          'notificationPush': true,
         });
 
         // Proceed to the next step

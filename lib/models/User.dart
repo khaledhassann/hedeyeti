@@ -1,13 +1,12 @@
 // User.dart
-import 'package:hedeyeti/models/Event.dart';
 
 class User {
   final String id; // Unified ID as a String (Firestore ID)
-  final String name;
-  final String email;
-  final String profilePicture;
-  final bool isMe;
-  final List<Event> events;
+  String name;
+  String email;
+  String profilePicture;
+  bool isMe;
+  bool notificationPush;
 
   User({
     required this.id,
@@ -15,7 +14,7 @@ class User {
     required this.email,
     required this.profilePicture,
     required this.isMe,
-    required this.events,
+    required this.notificationPush,
   });
 
   // Parse from SQLite map
@@ -24,9 +23,10 @@ class User {
       id: map['id'] as String, // Now a String
       name: map['name'] ?? 'Unknown User',
       email: map['email'] ?? 'No Email',
-      profilePicture: map['profilePicture'] ?? 'assets/default-avatar.png',
+      profilePicture: map['profilePicture'] ?? 'assets/images.png',
       isMe: map['isMe'] == 1, // SQLite stores booleans as integers
-      events: [], // Populate from SQLite or Firestore later
+      notificationPush:
+          map['notificationPush'] == 1, // SQLite stores booleans as integers
     );
   }
 
@@ -36,9 +36,9 @@ class User {
       id: id, // Directly use Firestore ID as String
       name: map['name'] ?? 'Unknown User',
       email: map['email'] ?? 'No Email',
-      profilePicture: map['profilePicture'] ?? 'assets/default-avatar.png',
+      profilePicture: map['profilePicture'] ?? 'assets/images.png',
       isMe: false, // Firestore users are friends, not the logged-in user
-      events: [], // Populate events separately
+      notificationPush: map['notificationPush'] == true,
     );
   }
 
@@ -50,6 +50,8 @@ class User {
       'email': email,
       'profilePicture': profilePicture,
       'isMe': isMe ? 1 : 0, // Store booleans as integers
+      'notificationPush':
+          notificationPush ? 1 : 0, // Store booleans as integers
     };
   }
 
@@ -59,6 +61,7 @@ class User {
       'name': name,
       'email': email,
       'profilePicture': profilePicture,
+      'notificationPush': notificationPush,
     };
   }
 }

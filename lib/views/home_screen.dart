@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Ensure Firestore is imported
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/User.dart';
+import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/event_list_screen.dart';
 import 'package:hedeyeti/views/login_screen.dart';
 import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 import 'package:hedeyeti/views/profile_page_screen.dart';
-import '../services/firebase_auth_service.dart';
 import '../services/database_helper.dart';
 
 class HomePage extends StatefulWidget {
@@ -21,6 +21,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
   final DatabaseHelper _dbHelper = DatabaseHelper();
   late Future<User> _userFuture; // Fetch logged-in user's data
   late Future<List<User>> _friendsFuture; // Fetch friends' data
@@ -39,7 +40,16 @@ class _HomePageState extends State<HomePage> {
           await _dbHelper.getUser(); // Now returns a User with String ID
       return userData;
     } catch (e) {
+      //! ALERT: this function returns an imaginary user when none found instead of an exception
       print('Error fetching logged-in user: $e');
+      return User(
+        id: '',
+        name: '',
+        email: '',
+        profilePicture: '',
+        isMe: true,
+        notificationPush: true,
+      );
       rethrow;
     }
   }
@@ -175,12 +185,14 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundImage: user.profilePicture.isNotEmpty
-                        ? NetworkImage(user.profilePicture)
-                        : const AssetImage('assets/default-avatar.png')
-                            as ImageProvider,
+                  Expanded(
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundImage: user.profilePicture.isNotEmpty
+                          ? NetworkImage(user.profilePicture)
+                          : const AssetImage('assets/images.png')
+                              as ImageProvider,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -203,7 +215,8 @@ class _HomePageState extends State<HomePage> {
                   EventListPage.routeName,
                   arguments: {
                     'name': user.name,
-                    'events': user.events,
+                    'events':
+                        _firebaseHelper.getEventsForUserFromFireStore(user.id),
                   },
                 );
               },
@@ -227,8 +240,7 @@ class _HomePageState extends State<HomePage> {
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
               onTap: () async {
-                final authService = FirebaseAuthService();
-                await authService.logoutUser();
+                _firebaseHelper.logoutUser();
                 Navigator.pushReplacementNamed(context, LoginScreen.routeName);
               },
             ),
@@ -270,7 +282,7 @@ class _HomePageState extends State<HomePage> {
             ),
             title: Text(friend.name),
             subtitle: Text(
-              friend.events.isNotEmpty
+              _firebaseHelper.getEventsForUserFromFireStore(friend.id).isEmpty
                   ? 'Upcoming Events: ${friend.events.length}'
                   : 'No Upcoming Events',
             ),
