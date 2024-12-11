@@ -168,7 +168,7 @@ class FirebaseHelper {
   }
 
   // Fetch friends of a user and return a list of User objects
-  Future<List<User>?> getFriendsFromFirestore(String userId) async {
+  Future<List<User>> getFriendsFromFirestore(String userId) async {
     try {
       final doc = await friends.doc(userId).get(); // Fetch friend's document
       if (doc.exists) {
@@ -188,7 +188,7 @@ class FirebaseHelper {
       return []; // Return empty list if no friends
     } catch (e) {
       print('Error getting friends: $e');
-      return null; // Return null on error
+      return []; // Return null on error
     }
   }
 
@@ -241,7 +241,7 @@ class FirebaseHelper {
   }
 
   // Fetch events for a user from Firestore
-  Future<List<Event>?> getEventsForUserFromFireStore(String userId) async {
+  Future<List<Event>>? getEventsForUserFromFireStore(String userId) async {
     try {
       final querySnapshot = await events
           .where('userId', isEqualTo: userId)
@@ -252,7 +252,7 @@ class FirebaseHelper {
           .toList(); // Parse and return event list
     } catch (e) {
       print('Error getting events: $e');
-      return null; // Return null on error
+      return []; // Return null on error
     }
   }
 

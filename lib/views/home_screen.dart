@@ -1,6 +1,5 @@
 // HomePage.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Ensure Firestore is imported
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/User.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
@@ -22,9 +21,9 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  // final DatabaseHelper _dbHelper = DatabaseHelper();
   late Future<User> _userFuture; // Fetch logged-in user's data
-  late Future<List<User>> _friendsFuture; // Fetch friends' data
+  late Future<List<User>>? _friendsFuture; // Fetch friends' data
 
   @override
   void initState() {
@@ -33,57 +32,44 @@ class _HomePageState extends State<HomePage> {
     _friendsFuture = _fetchFriends();
   }
 
-  /// Fetches the logged-in user's data from the local SQLite database.
+  /// Fetches the logged-in user's data from FirebaseHelper.
   Future<User> _fetchLoggedInUser() async {
     try {
-      final userData =
-          await _dbHelper.getUser(); // Now returns a User with String ID
-      return userData;
+      // Use the FirebaseHelper to get the current user
+      final userData = await _firebaseHelper.getCurrentUser();
+
+      // If userData is null, provide a default fallback user
+      if (userData == null) {
+        return User(
+          id: '',
+          name: 'Guest',
+          email: 'guest@example.com',
+          profilePicture: '',
+          isMe: true,
+          notificationPush: false,
+        );
+      }
+
+      return userData; // Return the fetched user
     } catch (e) {
-      //! ALERT: this function returns an imaginary user when none found instead of an exception
       print('Error fetching logged-in user: $e');
+      // Provide a fallback user in case of an error
       return User(
         id: '',
-        name: '',
-        email: '',
+        name: 'Guest',
+        email: 'guest@example.com',
         profilePicture: '',
         isMe: true,
-        notificationPush: true,
+        notificationPush: false,
       );
-      rethrow;
     }
   }
 
-  /// Fetches the list of friends from Firestore based on friend IDs stored in SQLite.
+  /// Fetches the list of friends from Firestore.
   Future<List<User>> _fetchFriends() async {
     try {
-      // Fetch the logged-in user
-      final currentUser = await _dbHelper.getUser();
-      final userId = currentUser.id; // Now a String
-
-      // Fetch friend IDs (List<String>)
-      final friendIds = await _dbHelper.getFriends(userId);
-      final firestore = FirebaseFirestore.instance;
-
-      // Fetch all friends' data in parallel
-      final futures = friendIds.map((firestoreId) async {
-        try {
-          final doc =
-              await firestore.collection('users').doc(firestoreId).get();
-          if (doc.exists && doc.data() != null) {
-            return User.fromFirestore(doc.data()!, doc.id);
-          } else {
-            print('Friend with id $firestoreId does not exist in Firestore.');
-            return null;
-          }
-        } catch (e) {
-          print('Error fetching friend with id $firestoreId: $e');
-          return null;
-        }
-      }).toList();
-
-      final friendsData = await Future.wait(futures);
-      return friendsData.whereType<User>().toList();
+      final currentUser = await _firebaseHelper.getCurrentUser();
+      return _firebaseHelper.getFriendsFromFirestore(currentUser!.id);
     } catch (e) {
       print('Error fetching friends: $e');
       return [];
@@ -171,7 +157,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Builds the navigation drawer with user information and navigation options.
   Widget _buildDrawer(BuildContext context, User user) {
     return Drawer(
       child: SingleChildScrollView(
@@ -213,11 +198,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pushNamed(
                   context,
                   EventListPage.routeName,
-                  arguments: {
-                    'name': user.name,
-                    'events':
-                        _firebaseHelper.getEventsForUserFromFireStore(user.id),
-                  },
+                  arguments: {'name': user.name, 'events': []},
                 );
               },
             ),
@@ -250,7 +231,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Builds the button to navigate to the event creation/editing screen.
   Widget _buildCreateEventButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -266,33 +246,49 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Builds the list of friends fetched from Firestore.
   Widget _buildFriendsList(List<User> friends) {
     return Expanded(
       child: ListView.builder(
         itemCount: friends.length,
         itemBuilder: (context, index) {
           final friend = friends[index];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundImage: friend.profilePicture.isNotEmpty
-                  ? NetworkImage(friend.profilePicture)
-                  : const AssetImage('assets/default-avatar.png')
-                      as ImageProvider,
-            ),
-            title: Text(friend.name),
-            subtitle: Text(
-              _firebaseHelper.getEventsForUserFromFireStore(friend.id).isEmpty
-                  ? 'Upcoming Events: ${friend.events.length}'
-                  : 'No Upcoming Events',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.pushNamed(
-                context,
-                EventListPage.routeName,
-                arguments: {'name': friend.name, 'events': friend.events},
-              );
+          return FutureBuilder<List<Event>>(
+            future: _firebaseHelper.getEventsForUserFromFireStore(friend.id),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const ListTile(
+                  title: Text('Loading...'),
+                  subtitle: Text('Fetching events...'),
+                );
+              } else if (snapshot.hasError) {
+                return ListTile(
+                  title: Text(friend.name),
+                  subtitle: Text('Error loading events'),
+                  trailing: const Icon(Icons.error, color: Colors.red),
+                );
+              } else {
+                final events = snapshot.data ?? [];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: friend.profilePicture.isNotEmpty
+                        ? NetworkImage(friend.profilePicture)
+                        : const AssetImage('assets/default-avatar.png')
+                            as ImageProvider,
+                  ),
+                  title: Text(friend.name),
+                  subtitle: Text(events.isNotEmpty
+                      ? 'Upcoming Events: ${events.length}'
+                      : 'No Upcoming Events'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      EventListPage.routeName,
+                      arguments: {'name': friend.name, 'events': events},
+                    );
+                  },
+                );
+              }
             },
           );
         },

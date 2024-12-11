@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hedeyeti/views/home_screen.dart';
 import 'package:hedeyeti/views/registration_journey.dart';
 import '../services/database_helper.dart';
-import '../services/firebase_auth_service.dart';
+import '../services/firebase_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   static const routeName = '/login';
@@ -15,7 +15,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _authService = FirebaseAuthService();
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -29,14 +29,14 @@ class _LoginScreenState extends State<LoginScreen> {
       });
       try {
         // Log the user in with FirebaseAuth
-        final userCredential = await _authService.loginUser(
+        final userCredential = await _firebaseHelper.loginUser(
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
-        final userId = userCredential!.uid;
+        final userId = userCredential!.id;
 
         // Fetch and sync user data, events, and gifts
-        await _syncUserData(userId);
+        // await _syncUserData(userId);
 
         // Navigate to the HomePage
         Navigator.pushReplacementNamed(context, HomePage.routeName);
@@ -55,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   /// Synchronizes user data, events, and gifts from Firestore to SQLite
+  /// ! Currently not used
   Future<void> _syncUserData(String userId) async {
     final firestore = FirebaseFirestore.instance;
     final dbHelper = DatabaseHelper();

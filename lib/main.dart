@@ -11,7 +11,6 @@ import 'package:hedeyeti/views/home_screen.dart';
 import 'package:hedeyeti/views/login_screen.dart';
 import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 import 'package:hedeyeti/views/profile_page_screen.dart';
-import 'package:hedeyeti/views/register_screen.dart';
 import 'package:hedeyeti/views/registration_journey.dart';
 import 'package:hedeyeti/views/splash_screen.dart';
 
@@ -41,7 +40,6 @@ class MyApp extends StatelessWidget {
         HomePage.routeName: (context) => HomePage(),
         LoginScreen.routeName: (context) => const LoginScreen(),
         RegistrationJourney.routeName: (context) => RegistrationJourney(),
-        RegisterScreen.routeName: (context) => const RegisterScreen(),
         EventListPage.routeName: (context) => EventListPage(),
         // GiftListPage.routeName: (context) => const GiftListPage(),
         ProfilePage.routeName: (context) => ProfilePage(),

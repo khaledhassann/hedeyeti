@@ -1,9 +1,9 @@
 // EventListPage.dart
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // Ensure Firestore is imported
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/friend_gift_list_screen.dart';
+import '../services/firebase_helper.dart';
 import '../widgets/deletion_confirmation_dialog.dart';
 import '../widgets/empty_list_message.dart';
 import '../widgets/event_card.dart';
@@ -23,6 +23,7 @@ class _EventListPageState extends State<EventListPage> {
   late String friendName; // Retain friendName for display
   List<Event> _events = [];
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
   @override
   void initState() {
@@ -97,7 +98,8 @@ class _EventListPageState extends State<EventListPage> {
                     Navigator.pushNamed(
                       context,
                       FriendsGiftListPage.routeName,
-                      arguments: event.gifts, // Pass the entire Event object
+                      arguments: _firebaseHelper.getGiftsForEventFromFirestore(
+                          event.id), // Pass the entire Event object
                     );
                   },
                   onPopupSelected: (value) {
