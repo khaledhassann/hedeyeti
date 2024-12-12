@@ -1,7 +1,7 @@
 // HomePage.dart
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Event.dart';
-import 'package:hedeyeti/models/User.dart';
+import 'package:hedeyeti/models/LocalUser.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/event_list_screen.dart';
@@ -22,8 +22,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
   // final DatabaseHelper _dbHelper = DatabaseHelper();
-  late Future<User> _userFuture; // Fetch logged-in user's data
-  late Future<List<User>>? _friendsFuture; // Fetch friends' data
+  late Future<LocalUser> _userFuture; // Fetch logged-in user's data
+  late Future<List<LocalUser>>? _friendsFuture; // Fetch friends' data
 
   @override
   void initState() {
@@ -33,14 +33,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Fetches the logged-in user's data from FirebaseHelper.
-  Future<User> _fetchLoggedInUser() async {
+  Future<LocalUser> _fetchLoggedInUser() async {
     try {
       // Use the FirebaseHelper to get the current user
       final userData = await _firebaseHelper.getCurrentUser();
 
       // If userData is null, provide a default fallback user
       if (userData == null) {
-        return User(
+        return LocalUser(
           id: '',
           name: 'Guest',
           email: 'guest@example.com',
@@ -54,7 +54,7 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       print('Error fetching logged-in user: $e');
       // Provide a fallback user in case of an error
-      return User(
+      return LocalUser(
         id: '',
         name: 'Guest',
         email: 'guest@example.com',
@@ -66,7 +66,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// Fetches the list of friends from Firestore.
-  Future<List<User>> _fetchFriends() async {
+  Future<List<LocalUser>> _fetchFriends() async {
     try {
       final currentUser = await _firebaseHelper.getCurrentUser();
       return _firebaseHelper.getFriendsFromFirestore(currentUser!.id);
@@ -106,7 +106,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      drawer: FutureBuilder<User>(
+      drawer: FutureBuilder<LocalUser>(
         future: _userFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -126,7 +126,7 @@ class _HomePageState extends State<HomePage> {
       body: Column(
         children: [
           _buildCreateEventButton(context),
-          FutureBuilder<List<User>>(
+          FutureBuilder<List<LocalUser>>(
             future: _friendsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -157,7 +157,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context, User user) {
+  Widget _buildDrawer(BuildContext context, LocalUser user) {
     return Drawer(
       child: SingleChildScrollView(
         child: Column(
@@ -246,7 +246,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildFriendsList(List<User> friends) {
+  Widget _buildFriendsList(List<LocalUser> friends) {
     return Expanded(
       child: ListView.builder(
         itemCount: friends.length,

@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
-        final userId = userCredential!.id;
+        // final userId = userCredential!.id;
 
         // Fetch and sync user data, events, and gifts
         // await _syncUserData(userId);

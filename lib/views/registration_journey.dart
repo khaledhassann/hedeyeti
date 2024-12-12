@@ -1,8 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/home_screen.dart';
 import 'package:hedeyeti/views/login_screen.dart';
+import 'package:hedeyeti/services/image_helper.dart';
 
 class RegistrationJourney extends StatefulWidget {
   static const routeName = '/registration-journey';
@@ -21,14 +24,11 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
 
   int _currentStep = 0;
   bool _isLoading = false;
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  String? _profilePictureBase64; // Store the profile picture as a Base64 string
 
   late String _userId; // To store the registered user's ID
 
@@ -39,21 +39,14 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
       });
 
       try {
-        // Firebase Auth: Register user with email and password
-        final UserCredential userCredential =
-            await _auth.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
+        // Register user with Firebase Helper
+        await _firebaseHelper.registerUser(
+          _emailController.text.trim(),
+          _passwordController.text.trim(),
         );
 
-        _userId = userCredential.user!.uid;
-
-        // Save initial user data to Firestore
-        await _firestore.collection('users').doc(_userId).set({
-          'name': '',
-          'email': _emailController.text.trim(),
-          'notificationPush': true,
-        });
+        final currentUser = await _firebaseHelper.getCurrentUser();
+        if (currentUser != null) _userId = currentUser.id;
 
         // Proceed to the next step
         setState(() {
@@ -105,11 +98,11 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
 
     try {
       // Update additional user details in Firestore
-      await _firestore.collection('users').doc(_userId).update({
-        'name': _nameController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'address': _addressController.text.trim(),
-      });
+      await _firebaseHelper.updateUserInFirestore(
+        userId: _userId,
+        name: _nameController.text.trim(),
+        profilePicture: _profilePictureBase64,
+      );
 
       // Navigate to home or the next screen
       Navigator.pushReplacementNamed(context, HomePage.routeName);
@@ -133,6 +126,28 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFilePath = await ImageHelper.selectImage();
+
+    if (pickedFilePath != null) {
+      final bytes = await File(pickedFilePath).readAsBytes();
+      setState(() {
+        _profilePictureBase64 = base64Encode(bytes);
+      });
+    }
+  }
+
+  Future<void> _takePicture() async {
+    final pickedFilePath = await ImageHelper.captureImage(context);
+
+    if (pickedFilePath != null) {
+      final bytes = await File(pickedFilePath).readAsBytes();
+      setState(() {
+        _profilePictureBase64 = base64Encode(bytes);
+      });
     }
   }
 
@@ -220,7 +235,7 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
             ),
           ),
 
-          // Step 2: Additional Information
+          // Step 2: Additional Information and Profile Picture
           SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -248,17 +263,34 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(labelText: 'Phone'),
-                      keyboardType: TextInputType.phone,
+                    const SizedBox(height: 24),
+
+                    // Profile Picture Upload
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _pickImage,
+                          icon: const Icon(Icons.photo_library),
+                          label: const Text('Upload Photo'),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: _takePicture,
+                          icon: const Icon(Icons.camera_alt),
+                          label: const Text('Take Photo'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _addressController,
-                      decoration: const InputDecoration(labelText: 'Address'),
-                    ),
+                    if (_profilePictureBase64 != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: Image.memory(
+                          base64Decode(_profilePictureBase64!),
+                          height: 100,
+                          width: 100,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: _nextStep,
@@ -294,10 +326,6 @@ class _RegistrationJourneyState extends State<RegistrationJourney> {
                 Text('Name: ${_nameController.text}',
                     textAlign: TextAlign.center),
                 Text('Email: ${_emailController.text}',
-                    textAlign: TextAlign.center),
-                Text('Phone: ${_phoneController.text}',
-                    textAlign: TextAlign.center),
-                Text('Address: ${_addressController.text}',
                     textAlign: TextAlign.center),
                 const SizedBox(height: 24),
                 ElevatedButton(

@@ -3,9 +3,10 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/Gift.dart';
-import 'package:hedeyeti/models/User.dart';
+import 'package:hedeyeti/models/LocalUser.dart';
 
 class FirebaseHelper {
   // Step 1: Create a private static instance of the class
@@ -32,7 +33,7 @@ class FirebaseHelper {
   // Authentication functions
 
   // Register a new user with email and password
-  Future<User?> registerUser(String email, String password, String name) async {
+  Future<LocalUser?> registerUser(String email, String password) async {
     try {
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -41,9 +42,9 @@ class FirebaseHelper {
       final firebaseUser = userCredential.user;
       if (firebaseUser != null) {
         // Create user document in Firestore
-        final user = User(
+        final user = LocalUser(
           id: firebaseUser.uid,
-          name: name,
+          name: '',
           email: email,
           profilePicture: '',
           isMe: true,
@@ -53,14 +54,14 @@ class FirebaseHelper {
         return user;
       }
       return null;
-    } catch (e) {
+    } on FirebaseAuthException catch (e) {
       print('Error registering user: $e');
-      return null;
+      rethrow;
     }
   }
 
   // Login a user with email and password
-  Future<User?> loginUser(String email, String password) async {
+  Future<LocalUser?> loginUser(String email, String password) async {
     try {
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -73,7 +74,7 @@ class FirebaseHelper {
       return null;
     } catch (e) {
       print('Error logging in user: $e');
-      return null;
+      rethrow;
     }
   }
 
@@ -87,7 +88,7 @@ class FirebaseHelper {
   }
 
   // Fetch the currently logged-in user's data from Firestore
-  Future<User?> getCurrentUser() async {
+  Future<LocalUser?> getCurrentUser() async {
     try {
       final currentUser =
           _auth.currentUser; // Get the currently logged-in Firebase user
@@ -95,7 +96,7 @@ class FirebaseHelper {
         final userDoc =
             await users.doc(currentUser.uid).get(); // Fetch Firestore document
         if (userDoc.exists) {
-          return User.fromFirestore(userDoc.data() as Map<String, dynamic>,
+          return LocalUser.fromFirestore(userDoc.data() as Map<String, dynamic>,
               userDoc.id); // Parse user data
         }
       }
@@ -106,14 +107,14 @@ class FirebaseHelper {
     }
   }
 
-  // User direct functions
+  // LocalUser direct functions
 
   // Fetch a user document from Firestore by userId
-  Future<User?> getUserFromFirestore(String userId) async {
+  Future<LocalUser?> getUserFromFirestore(String userId) async {
     try {
       final doc = await users.doc(userId).get(); // Fetch document
       if (doc.exists) {
-        return User.fromFirestore(doc.data() as Map<String, dynamic>,
+        return LocalUser.fromFirestore(doc.data() as Map<String, dynamic>,
             doc.id); // Parse user data using User model
       }
       return null; // Return null if user doesn't exist
@@ -168,14 +169,14 @@ class FirebaseHelper {
   }
 
   // Fetch friends of a user and return a list of User objects
-  Future<List<User>> getFriendsFromFirestore(String userId) async {
+  Future<List<LocalUser>> getFriendsFromFirestore(String userId) async {
     try {
       final doc = await friends.doc(userId).get(); // Fetch friend's document
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         final friendIds =
             List<String>.from(data['friendIds'] ?? []); // Parse friend IDs
-        final localListOfFriends = <User>[];
+        final localListOfFriends = <LocalUser>[];
         for (final friendId in friendIds) {
           final friend =
               await getUserFromFirestore(friendId); // Fetch each friend

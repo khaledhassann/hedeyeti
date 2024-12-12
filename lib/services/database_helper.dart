@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import '../models/User.dart';
+import '../models/LocalUser.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -164,7 +164,7 @@ class DatabaseHelper {
   }
 
   // Fetch User by ID
-  Future<User?> getUserById(String userId) async {
+  Future<LocalUser?> getUserById(String userId) async {
     final db = await database;
     final maps = await db.query(
       'users',
@@ -174,14 +174,14 @@ class DatabaseHelper {
     );
 
     if (maps.isNotEmpty) {
-      return User.fromSQLite(maps.first);
+      return LocalUser.fromSQLite(maps.first);
     } else {
       return null;
     }
   }
 
   // Fetch Logged-In User
-  Future<User> getUser() async {
+  Future<LocalUser> getUser() async {
     final db = await database;
     final results = await db.query(
       'users',
@@ -190,7 +190,7 @@ class DatabaseHelper {
       limit: 1,
     );
     if (results.isNotEmpty) {
-      return User.fromSQLite(results.first);
+      return LocalUser.fromSQLite(results.first);
     } else {
       throw Exception('No logged-in user found in the database.');
     }
@@ -346,7 +346,7 @@ class DatabaseHelper {
   }
 
   // Fetch User by Firestore ID (if needed)
-  Future<User?> getUserByFirestoreId(String firestoreId) async {
+  Future<LocalUser?> getUserByFirestoreId(String firestoreId) async {
     final db = await database;
     final maps = await db.query(
       'users',
@@ -356,7 +356,7 @@ class DatabaseHelper {
     );
 
     if (maps.isNotEmpty) {
-      return User.fromSQLite(maps.first);
+      return LocalUser.fromSQLite(maps.first);
     } else {
       return null;
     }

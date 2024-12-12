@@ -1,6 +1,6 @@
 // User.dart
 
-class User {
+class LocalUser {
   final String id; // Unified ID as a String (Firestore ID)
   String name;
   String email;
@@ -8,7 +8,7 @@ class User {
   bool isMe;
   bool notificationPush;
 
-  User({
+  LocalUser({
     required this.id,
     required this.name,
     required this.email,
@@ -18,8 +18,8 @@ class User {
   });
 
   // Parse from SQLite map
-  factory User.fromSQLite(Map<String, dynamic> map) {
-    return User(
+  factory LocalUser.fromSQLite(Map<String, dynamic> map) {
+    return LocalUser(
       id: map['id'] as String, // Now a String
       name: map['name'] ?? 'Unknown User',
       email: map['email'] ?? 'No Email',
@@ -31,8 +31,8 @@ class User {
   }
 
   // Parse from Firestore document
-  factory User.fromFirestore(Map<String, dynamic> map, String id) {
-    return User(
+  factory LocalUser.fromFirestore(Map<String, dynamic> map, String id) {
+    return LocalUser(
       id: id, // Directly use Firestore ID as String
       name: map['name'] ?? 'Unknown User',
       email: map['email'] ?? 'No Email',
