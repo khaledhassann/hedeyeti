@@ -1,4 +1,6 @@
 // HomePage.dart
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/LocalUser.dart';
@@ -81,17 +83,39 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Hedeyeti - Home'),
-        leading: Builder(
-          builder: (context) {
-            return GestureDetector(
-              onTap: () {
-                Scaffold.of(context).openDrawer();
-              },
-              child: const Padding(
+        leading: FutureBuilder<LocalUser>(
+          future: _userFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 11.0),
                 child: CircleAvatar(
                   radius: 18,
                   backgroundImage: AssetImage('assets/images.png'),
+                ),
+              );
+            } else if (snapshot.hasError || snapshot.data == null) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 11.0),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundImage: AssetImage('assets/images.png'),
+                ),
+              );
+            }
+
+            final user = snapshot.data!;
+            return GestureDetector(
+              onTap: () {
+                Scaffold.of(context).openDrawer();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 11.0),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundImage: user.profilePicture.isNotEmpty
+                      ? MemoryImage(base64Decode(user.profilePicture))
+                      : const AssetImage('assets/images.png') as ImageProvider,
                 ),
               ),
             );
@@ -174,7 +198,9 @@ class _HomePageState extends State<HomePage> {
                     child: CircleAvatar(
                       radius: 40,
                       backgroundImage: user.profilePicture.isNotEmpty
-                          ? NetworkImage(user.profilePicture)
+                          ? MemoryImage(
+                              base64Decode(user.profilePicture),
+                            )
                           : const AssetImage('assets/images.png')
                               as ImageProvider,
                     ),
