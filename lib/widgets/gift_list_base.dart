@@ -10,6 +10,8 @@ class GiftListBase extends StatelessWidget {
   final bool showAddButton;
   final VoidCallback? onAddGift;
   final Function(int index)? onPledgeGift;
+  final Function(int index)? onViewGiftDetails;
+  final Function(int index)? onGiftTap;
   final Function(int index)? onEditGift;
   final Function(int index)? onDeleteGift;
   final Function(String sortBy)? onSort;
@@ -23,6 +25,8 @@ class GiftListBase extends StatelessWidget {
     this.showAddButton = false,
     this.onAddGift,
     this.onPledgeGift,
+    this.onViewGiftDetails,
+    this.onGiftTap,
     this.onEditGift,
     this.onDeleteGift,
     this.onSort,
@@ -64,6 +68,7 @@ class GiftListBase extends StatelessWidget {
                   margin:
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: ListTile(
+                    onTap: () => onGiftTap?.call(index),
                     leading: CircleAvatar(
                       backgroundColor: gift.status == 'Pledged'
                           ? Colors.red[100]
@@ -97,7 +102,7 @@ class GiftListBase extends StatelessWidget {
   }
 
   Widget? _buildActions(BuildContext context, int index, Gift gift) {
-    if (canEdit && gift.status != 'Pledged') {
+    if (canEdit) {
       return PopupMenuButton<String>(
         onSelected: (value) {
           if (value == 'Edit') {
@@ -119,10 +124,21 @@ class GiftListBase extends StatelessWidget {
       );
     }
 
-    if (canPledge && gift.status != 'Pledged') {
-      return TextButton(
-        onPressed: () => onPledgeGift?.call(index),
-        child: const Text('Pledge'),
+    if (canPledge) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => onViewGiftDetails?.call(index),
+            tooltip: 'View Details',
+          ),
+          if (gift.status != 'Pledged')
+            TextButton(
+              onPressed: () => onPledgeGift?.call(index),
+              child: const Text('Pledge'),
+            ),
+        ],
       );
     }
 

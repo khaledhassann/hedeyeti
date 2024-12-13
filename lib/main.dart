@@ -5,7 +5,7 @@ import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/create_edit_gift_screen.dart';
 import 'package:hedeyeti/views/event_list_screen.dart';
-import 'package:hedeyeti/views/friend_gift_list_screen.dart';
+import 'package:hedeyeti/views/gift_details_screen.dart';
 import 'package:hedeyeti/views/gift_list_screen.dart';
 import 'package:hedeyeti/views/home_screen.dart';
 import 'package:hedeyeti/views/login_screen.dart';
@@ -41,12 +41,12 @@ class MyApp extends StatelessWidget {
         LoginScreen.routeName: (context) => const LoginScreen(),
         RegistrationJourney.routeName: (context) => RegistrationJourney(),
         EventListPage.routeName: (context) => EventListPage(),
-        // GiftListPage.routeName: (context) => const GiftListPage(),
         ProfilePage.routeName: (context) => ProfilePage(),
         MyPledgedGiftsPage.routeName: (context) => MyPledgedGiftsPage(),
         CreateEditEventPage.routeName: (context) => const CreateEditEventPage(),
         CreateEditGiftPage.routeName: (context) => const CreateEditGiftPage(),
-        FriendsGiftListPage.routeName: (context) => const FriendsGiftListPage(),
+        GiftListPage.routeName: (context) => const GiftListPage(),
+        GiftDetailsPage.routeName: (context) => const GiftDetailsPage(),
       },
       initialRoute: SplashScreen.routeName, // Start with Splash Screen
     );

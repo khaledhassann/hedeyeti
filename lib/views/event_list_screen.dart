@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
-import 'package:hedeyeti/views/friend_gift_list_screen.dart';
+import 'package:hedeyeti/views/gift_list_screen.dart';
 import '../services/firebase_helper.dart';
 import '../widgets/deletion_confirmation_dialog.dart';
 import '../widgets/empty_list_message.dart';
@@ -92,8 +92,11 @@ class _EventListPageState extends State<EventListPage> {
                     // Navigate to gift list regardless of ownership
                     Navigator.pushNamed(
                       context,
-                      FriendsGiftListPage.routeName,
-                      arguments: event.id,
+                      GiftListPage.routeName,
+                      arguments: {
+                        'eventId': event.id,
+                        'ownerId': event.userId,
+                      },
                     );
                   },
                   onPopupSelected: (value) {

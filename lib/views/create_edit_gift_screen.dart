@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../services/database_helper.dart';
+import 'package:hedeyeti/models/Gift.dart';
+import '../services/firebase_helper.dart';
 import '../widgets/reusable_text_field.dart';
 import '../widgets/gift_category_dropdown.dart';
 import '../widgets/primary_button.dart';
+import 'package:flutter/scheduler.dart';
 
 class CreateEditGiftPage extends StatefulWidget {
   static const routeName = '/create-edit-gift';
@@ -21,8 +23,9 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
   String _category = 'Electronics';
   bool _isPledged = false;
   String? _giftId; // For editing
-  late int _eventId; // To link the gift to an event
-  late int _loggedInUserId; // Logged-in user's ID (set dynamically)
+  late String _eventId; // To link the gift to an event
+  String? _loggedInUserId; // Logged-in user's ID
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
   @override
   void didChangeDependencies() {
@@ -31,19 +34,38 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
     // Retrieve arguments from route
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    _giftId = args?['id']; // Nullable for new gifts
-    _eventId = args?['eventId'] ?? 0; // Event ID must be passed
-    _loggedInUserId =
-        args?['loggedInUserId'] ?? 0; // User ID passed from context
+
+    // Ensure event ID is passed
+    if (args == null || !args.containsKey('eventId')) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: Missing event ID.')),
+        );
+        Navigator.pop(context); // Return to the previous screen
+      });
+      return;
+    }
+
+    _eventId = args['eventId'] as String;
+    _giftId = args['gift']?.id; // Nullable for new gifts
+
+    // Get the logged-in user's ID
+    _firebaseHelper.getCurrentUser().then((user) {
+      if (mounted) {
+        setState(() {
+          _loggedInUserId = user?.id;
+        });
+      }
+    });
 
     // Initialize controllers with existing data if editing
-    _nameController = TextEditingController(text: args?['name'] ?? '');
+    _nameController = TextEditingController(text: args['gift']?.name ?? '');
     _descriptionController =
-        TextEditingController(text: args?['description'] ?? '');
+        TextEditingController(text: args['gift']?.description ?? '');
     _priceController =
-        TextEditingController(text: args?['price']?.toString() ?? '');
-    _category = args?['category'] ?? 'Electronics';
-    _isPledged = args?['status'] == 'Pledged';
+        TextEditingController(text: args['gift']?.price?.toString() ?? '');
+    _category = args['gift']?.category ?? 'Electronics';
+    _isPledged = args['gift']?.status == 'Pledged';
   }
 
   @override
@@ -54,40 +76,75 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
     super.dispose();
   }
 
-  Future<void> _saveGiftToDatabase() async {
+  Future<void> _saveGiftToFirestore() async {
     if (_formKey.currentState!.validate()) {
-      final dbHelper = DatabaseHelper();
-      final giftDetails = {
-        'name': _nameController.text,
-        'description': _descriptionController.text,
-        'price': double.tryParse(_priceController.text) ?? 0.0,
-        'category': _category,
-        'status': _isPledged ? 'Pledged' : 'Available',
-        'event_id': _eventId, // Link to the event
-        'pledger_id': _isPledged ? _loggedInUserId : null, // Set if pledged
-      };
+      // Ensure userId is fetched before proceeding
+      final userId = _loggedInUserId;
 
-      if (_giftId == null) {
-        // Insert new gift
-        await dbHelper.insertGift(giftDetails);
+      if (userId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Gift added successfully!'),
-            backgroundColor: Colors.green,
+            content: Text('Error: Unable to determine logged-in user.'),
+            backgroundColor: Colors.red,
           ),
         );
-      } else {
-        // Update existing gift
-        await dbHelper.updateGift(_giftId!, giftDetails);
+        return;
+      }
+
+      final giftId = _giftId ??
+          _firebaseHelper.gifts.doc().id; // Generate a new ID if null
+
+      final gift = Gift(
+        id: giftId,
+        name: _nameController.text,
+        description: _descriptionController.text.isNotEmpty
+            ? _descriptionController.text
+            : null, // Ensure description is null if empty
+        category: _category,
+        price: double.tryParse(_priceController.text) ?? 0.0,
+        status: _isPledged ? 'Pledged' : 'Available',
+        eventId: _eventId,
+        pledgerId: _isPledged ? userId : null,
+      );
+
+      try {
+        if (_giftId == null) {
+          // Insert new gift
+          await _firebaseHelper.insertGiftInFirestore(gift);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gift added successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Update existing gift
+          await _firebaseHelper.updateGiftInFirestore(
+            giftId: gift.id,
+            name: gift.name,
+            description: gift.description,
+            category: gift.category,
+            price: gift.price,
+            status: gift.status,
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gift updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        Navigator.pop(context); // Close the screen
+      } catch (e) {
+        print('Error saving gift: $e');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gift updated successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text('Failed to save gift: $e'),
+            backgroundColor: Colors.red,
           ),
         );
       }
-
-      Navigator.pop(context); // Return to the previous screen
     }
   }
 
@@ -140,7 +197,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
               // Price
               ReusableTextField(
                 controller: _priceController,
-                labelText: 'Price (\$)',
+                labelText: 'Price (EGP)',
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -171,7 +228,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
               // Save Button
               PrimaryButton(
                 text: 'Save Gift',
-                onPressed: _saveGiftToDatabase,
+                onPressed: _saveGiftToFirestore,
                 snackbarMessage: 'Gift saved successfully!',
                 snackbarColor: Colors.green,
               ),

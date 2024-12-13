@@ -90,4 +90,26 @@ class Gift {
       'pledger_id': pledgerId,
     };
   }
+
+  Gift copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? category,
+    double? price,
+    String? status,
+    String? eventId,
+    String? pledgerId,
+  }) {
+    return Gift(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      price: price ?? this.price,
+      status: status ?? this.status,
+      eventId: eventId ?? this.eventId,
+      pledgerId: pledgerId ?? this.pledgerId,
+    );
+  }
 }
