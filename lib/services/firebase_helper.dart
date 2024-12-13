@@ -130,11 +130,13 @@ class FirebaseHelper {
     String? name,
     String? email,
     String? profilePicture,
+    bool? notificationPush,
   }) async {
     try {
       final data = <String, dynamic>{}; // Initialize update map
       if (name != null) data['name'] = name; // Add name if provided
       if (email != null) data['email'] = email; // Add email if provided
+      if (notificationPush != null) data['notificationPush'] = notificationPush;
       if (profilePicture != null)
         data['profilePicture'] =
             profilePicture; // Add profile picture if provided

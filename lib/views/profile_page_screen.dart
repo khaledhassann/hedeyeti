@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/models/Event.dart';
+import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/pledged_gifts_screen.dart';
-import '../services/database_helper.dart';
 
 class ProfilePage extends StatefulWidget {
   static const routeName = '/profile';
+
+  const ProfilePage({Key? key}) : super(key: key);
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  late Map<String, String> user = {}; // User info from the database
-  late List<Map<String, dynamic>> events = []; // User's events
-  final DatabaseHelper _dbHelper = DatabaseHelper(); // SQLite database helper
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  Map<String, String> user = {}; // User info from Firebase
+  List<Event> events = []; // User's events
   bool emailNotifications = true; // Example notification setting
   bool pushNotifications = false; // Example notification setting
 
@@ -23,24 +26,35 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadProfileData(); // Load user data and events
   }
 
-  /// Loads user data and events from the database
+  /// Loads user data and events from Firebase
   Future<void> _loadProfileData() async {
-    // Fetch user info (assuming single user for simplicity)
-    final userData = await _dbHelper.getUser();
-    final eventData = await _dbHelper.getEventsForUser(userData.id);
+    final currentUser = await _firebaseHelper.getCurrentUser();
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error loading profile. Please log in again.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final userEvents =
+        await _firebaseHelper.getEventsForUserFromFireStore(currentUser.id);
 
     setState(() {
       user = {
-        'name': userData.name,
-        'email': userData.email,
+        'name': currentUser.name,
+        'email': currentUser.email,
       };
-      events = eventData;
+      events = userEvents ?? [];
+      emailNotifications = currentUser.notificationPush; // Example setting
+      pushNotifications = currentUser.notificationPush; // Example setting
     });
   }
 
-  /// Updates user info in the database
+  /// Updates user info in Firebase
   Future<void> _editUserInfo() async {
-    // Logic to edit user info (example with dialog for input)
     final nameController = TextEditingController(text: user['name']);
     final emailController = TextEditingController(text: user['email']);
 
@@ -68,18 +82,22 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           TextButton(
             onPressed: () async {
-              final updatedUser = {
-                'id': 1, // Assuming single user with ID = 1
-                'name': nameController.text,
-                'email': emailController.text,
-              };
+              final updatedName = nameController.text;
+              final updatedEmail = emailController.text;
 
-              await _dbHelper.updateUser(updatedUser);
-
-              setState(() {
-                user['name'] = nameController.text;
-                user['email'] = emailController.text;
-              });
+              // Update in Firebase
+              final currentUser = await _firebaseHelper.getCurrentUser();
+              if (currentUser != null) {
+                await _firebaseHelper.updateUserInFirestore(
+                  userId: currentUser.id,
+                  name: updatedName,
+                  email: updatedEmail,
+                );
+                setState(() {
+                  user['name'] = updatedName;
+                  user['email'] = updatedEmail;
+                });
+              }
 
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -97,15 +115,19 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   /// Toggles notification settings
-  void _toggleNotificationSetting(bool value, String type) {
+  void _toggleNotificationSetting(bool value) async {
     setState(() {
-      if (type == 'email') {
-        emailNotifications = value;
-      } else if (type == 'push') {
-        pushNotifications = value;
-      }
+      pushNotifications = value;
     });
-    // TODO: Save notification settings to local storage or server
+
+    // Update in Firebase
+    final currentUser = await _firebaseHelper.getCurrentUser();
+    if (currentUser != null) {
+      await _firebaseHelper.updateUserInFirestore(
+        userId: currentUser.id,
+        notificationPush: value,
+      );
+    }
   }
 
   @override
@@ -136,15 +158,8 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               children: [
                 SwitchListTile(
-                  value: emailNotifications,
-                  onChanged: (value) =>
-                      _toggleNotificationSetting(value, 'email'),
-                  title: const Text('Email Notifications'),
-                ),
-                SwitchListTile(
                   value: pushNotifications,
-                  onChanged: (value) =>
-                      _toggleNotificationSetting(value, 'push'),
+                  onChanged: (value) => _toggleNotificationSetting(value),
                   title: const Text('Push Notifications'),
                 ),
               ],
@@ -161,8 +176,8 @@ class _ProfilePageState extends State<ProfilePage> {
             return Card(
               margin: const EdgeInsets.symmetric(vertical: 4.0),
               child: ListTile(
-                title: Text(event['name']),
-                subtitle: Text('Date: ${event['date']}'),
+                title: Text(event.name),
+                subtitle: Text('Date: ${event.formattedDate}'),
                 trailing: IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: () {
