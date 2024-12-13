@@ -1,79 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
-import '../services/database_helper.dart';
-import '../views/create_edit_gift_screen.dart';
+import '../services/firebase_helper.dart';
 
 class MyPledgedGiftsPage extends StatefulWidget {
   static const routeName = '/pledged-gifts';
+
+  const MyPledgedGiftsPage({Key? key}) : super(key: key);
 
   @override
   State<MyPledgedGiftsPage> createState() => _MyPledgedGiftsPageState();
 }
 
 class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
-  late Future<List<Gift>> _pledgedGiftsFuture; // Future for pledged gifts
-  final DatabaseHelper _dbHelper = DatabaseHelper(); // SQLite helper
-  late String _loggedInUserId; // Logged-in user's ID
+  late Future<List<Gift>> _pledgedGiftsFuture;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  String? userId;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    // Retrieve the logged-in user's ID from the route arguments
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    _loggedInUserId = args?['loggedInUserId'] ?? 0;
-
-    // Load pledged gifts for the user
-    _pledgedGiftsFuture = _loadPledgedGifts();
+  void initState() {
+    super.initState();
+    _pledgedGiftsFuture = _loadPledgedGifts(); // Initialize the future.
   }
 
-  /// Fetches all gifts pledged by the logged-in user
   Future<List<Gift>> _loadPledgedGifts() async {
-    final giftMaps = await _dbHelper.getGiftsPledgedByUser(_loggedInUserId);
-    return giftMaps.map((giftMap) => Gift.fromMap(giftMap)).toList();
+    final currentUser = await _firebaseHelper.getCurrentUser();
+    userId = currentUser?.id;
+
+    if (userId == null) {
+      return []; // Return an empty list if no user is logged in.
+    }
+
+    final pledgedGifts =
+        await _firebaseHelper.getPledgedGiftsFromUserFromFirestore(userId!);
+    return pledgedGifts ?? [];
   }
 
-  /// Confirms and cancels a gift pledge, updating the database
-  void _confirmCancel(BuildContext context, Gift gift) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Cancel Pledge'),
-          content: Text(
-              'Are you sure you want to cancel your pledge for "${gift.name}"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('No'),
-            ),
-            TextButton(
-              onPressed: () async {
-                // Update gift status in the database
-                gift.status = 'Available';
-                gift.pledgerId = null; // Remove the pledger ID
-                await _dbHelper.updateGift(gift.id!, gift.toMap());
-
-                // Reload the UI
-                setState(() {
-                  _pledgedGiftsFuture = _loadPledgedGifts();
-                });
-
-                Navigator.of(ctx).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Pledge for "${gift.name}" canceled.'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              },
-              child: const Text('Yes', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _cancelPledge(Gift gift) async {
+    try {
+      await _firebaseHelper.updateGiftInFirestore(
+        giftId: gift.id,
+        status: 'Available',
+        pledgerId: null,
+      );
+      setState(() {
+        _pledgedGiftsFuture = _loadPledgedGifts();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Pledge for "${gift.name}" canceled successfully.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to cancel pledge: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -109,55 +94,18 @@ class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
                       const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: ListTile(
                     leading: Icon(
-                      gift.status == 'Completed'
-                          ? Icons.check_circle
-                          : Icons.pending,
-                      color: gift.status == 'Completed'
-                          ? Colors.green
-                          : Colors.orange,
+                      Icons.card_giftcard,
+                      color: Colors.green,
                     ),
                     title: Text(gift.name),
                     subtitle: Text(
-                      '${gift.description}\nPrice: \$${gift.price}',
-                    ),
-                    isThreeLine: true,
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'Edit') {
-                          // Navigate to Create/Edit Gift Page with gift data
-                          Navigator.pushNamed(
-                            context,
-                            CreateEditGiftPage.routeName,
-                            arguments: {
-                              'id': gift.id,
-                              'name': gift.name,
-                              'description': gift.description,
-                              'price': gift.price,
-                              'category': gift.category,
-                              'status': gift.status,
-                              'eventId': gift.eventId,
-                              'loggedInUserId': _loggedInUserId,
-                            },
-                          ).then((_) {
-                            setState(() {
-                              _pledgedGiftsFuture = _loadPledgedGifts();
-                            });
-                          });
-                        } else if (value == 'Cancel') {
-                          // Handle pledge cancellation
-                          _confirmCancel(context, gift);
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'Edit',
-                          child: Text('Edit'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'Cancel',
-                          child: Text('Cancel Pledge'),
-                        ),
-                      ],
+                        'Category: ${gift.category}\nPrice: \$${gift.price}'),
+                    trailing: TextButton(
+                      onPressed: () => _cancelPledge(gift),
+                      child: const Text(
+                        'Cancel Pledge',
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ),
                 );
