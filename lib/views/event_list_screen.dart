@@ -1,4 +1,3 @@
-// EventListPage.dart
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
@@ -7,7 +6,6 @@ import '../services/firebase_helper.dart';
 import '../widgets/deletion_confirmation_dialog.dart';
 import '../widgets/empty_list_message.dart';
 import '../widgets/event_card.dart';
-import '../services/database_helper.dart'; // Import DatabaseHelper
 
 class EventListPage extends StatefulWidget {
   static const routeName = '/events';
@@ -19,53 +17,52 @@ class EventListPage extends StatefulWidget {
 }
 
 class _EventListPageState extends State<EventListPage> {
-  late String friendId; // Changed from friendName to friendId
-  late String friendName; // Retain friendName for display
-  List<Event> _events = [];
-  final DatabaseHelper _dbHelper = DatabaseHelper();
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  String? _currentUserId;
+  String? _friendId;
+  String _title = 'Events';
+  List<Event> _events = [];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadEvents();
+      _initializePage();
     });
   }
 
-  /// Fetches the events for the specified friend from the local SQLite database.
-  void _loadEvents() async {
+  Future<void> _initializePage() async {
+    final currentUser = await _firebaseHelper.getCurrentUser();
+    setState(() {
+      _currentUserId = currentUser?.id;
+    });
+
     final args = ModalRoute.of(context)?.settings.arguments;
-
     if (args is Map<String, dynamic>) {
-      friendId = args['id'] as String? ?? '';
-      friendName = args['name'] as String? ?? 'Friend';
-
-      if (friendId.isEmpty) {
-        // Handle missing friendId
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error: Friend ID is missing')),
-        );
-        return;
-      }
-
-      // Fetch events from the database using friendId
-      final eventMaps = await _dbHelper.getEventsForUser(friendId);
+      _friendId = args['id'] as String?;
+      final friendName = args['name'] as String? ?? 'Friend';
 
       setState(() {
-        _events = eventMaps.map((e) => Event.fromMap(e)).toList();
+        _title =
+            _friendId == _currentUserId ? 'My Events' : "$friendName's Events";
       });
-    } else {
-      // Handle invalid arguments
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: Invalid arguments')),
-      );
+
+      await _loadEvents();
     }
   }
 
-  /// Deletes an event and updates the UI accordingly.
+  Future<void> _loadEvents() async {
+    if (_friendId != null) {
+      final events =
+          await _firebaseHelper.getEventsForUserFromFireStore(_friendId!);
+      setState(() {
+        _events = events ?? [];
+      });
+    }
+  }
+
   Future<void> _deleteEvent(String eventId, int index) async {
-    await _dbHelper.deleteEvent(eventId);
+    await _firebaseHelper.deleteEventInFirestore(eventId);
     setState(() {
       _events.removeAt(index);
     });
@@ -80,46 +77,47 @@ class _EventListPageState extends State<EventListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("$friendName's Events"),
-      ),
+      appBar: AppBar(title: Text(_title)),
       body: _events.isEmpty
-          ? const EmptyListMessage(
-              message: 'No events yet!',
-            )
+          ? const EmptyListMessage(message: 'No events yet!')
           : ListView.builder(
               itemCount: _events.length,
               itemBuilder: (context, index) {
                 final event = _events[index];
+                final isMyEvent = event.userId == _currentUserId;
 
                 return EventCard(
                   event: event,
                   onTap: () {
+                    // Navigate to gift list regardless of ownership
                     Navigator.pushNamed(
                       context,
                       FriendsGiftListPage.routeName,
-                      arguments: _firebaseHelper.getGiftsForEventFromFirestore(
-                          event.id), // Pass the entire Event object
+                      arguments: event.id,
                     );
                   },
                   onPopupSelected: (value) {
-                    if (value == 'Edit') {
-                      Navigator.pushNamed(
-                        context,
-                        CreateEditEventPage.routeName,
-                        arguments: event, // Pass the entire Event object
-                      ).then((_) => _loadEvents());
-                    } else if (value == 'Delete') {
-                      _confirmDelete(context, event.id, event.name, index);
+                    if (isMyEvent) {
+                      // Only allow editing and deleting for the current user's events
+                      if (value == 'Edit') {
+                        Navigator.pushNamed(
+                          context,
+                          CreateEditEventPage.routeName,
+                          arguments: event,
+                        ).then((_) => _loadEvents());
+                      } else if (value == 'Delete') {
+                        _confirmDelete(context, event.id, event.name, index);
+                      }
                     }
                   },
+                  isEditable:
+                      isMyEvent, // Pass ownership information to the card
                 );
               },
             ),
     );
   }
 
-  /// Shows a confirmation dialog before deleting an event.
   void _confirmDelete(
       BuildContext context, String? eventId, String eventName, int index) {
     if (eventId == null || eventId.isEmpty) {

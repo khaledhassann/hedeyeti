@@ -32,14 +32,14 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
 
     final args = ModalRoute.of(context)?.settings.arguments;
 
-    if (args is Map<dynamic, dynamic>) {
-      _eventId = args['id']; // Get the ID if editing an existing event
-      _nameController = TextEditingController(text: args['name'] ?? '');
-      _dateController = TextEditingController(text: args['date'] ?? '');
-      _locationController = TextEditingController(text: args['location'] ?? '');
+    if (args is Event) {
+      _eventId = args.id; // Get the ID if editing an existing event
+      _nameController = TextEditingController(text: args.name ?? '');
+      _dateController = TextEditingController(text: args.formattedDate ?? '');
+      _locationController = TextEditingController(text: args.location ?? '');
       _descriptionController =
-          TextEditingController(text: args['description'] ?? '');
-      _category = args['category'] ?? 'Birthday';
+          TextEditingController(text: args.description ?? '');
+      _category = args.category ?? 'Birthday';
     } else {
       _nameController = TextEditingController();
       _dateController = TextEditingController();

@@ -224,7 +224,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.pushNamed(
                   context,
                   EventListPage.routeName,
-                  arguments: {'name': user.name, 'events': []},
+                  arguments: {'id': user.id, 'name': user.name, 'events': []},
                 );
               },
             ),
@@ -316,7 +316,11 @@ class _HomePageState extends State<HomePage> {
                     Navigator.pushNamed(
                       context,
                       EventListPage.routeName,
-                      arguments: {'name': friend.name, 'events': events},
+                      arguments: {
+                        'id': friend.id,
+                        'name': friend.name,
+                        'events': events
+                      },
                     );
                   },
                 );
