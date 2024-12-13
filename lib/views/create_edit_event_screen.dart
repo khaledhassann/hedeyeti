@@ -1,10 +1,9 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/services/firebase_helper.dart';
+import '../models/Event.dart';
 import '../widgets/event_category_dropdown.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/reusable_text_field.dart';
-import '../services/database_helper.dart'; // Import the database helper class
 
 class CreateEditEventPage extends StatefulWidget {
   static const routeName = '/create-edit-event';
@@ -17,10 +16,13 @@ class CreateEditEventPage extends StatefulWidget {
 
 class _CreateEditEventPageState extends State<CreateEditEventPage> {
   final _formKey = GlobalKey<FormState>();
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+
   late TextEditingController _nameController;
   late TextEditingController _dateController;
   late TextEditingController _locationController;
   late TextEditingController _descriptionController;
+
   String _category = 'Birthday';
   String? _eventId; // To track if editing an existing event
 
@@ -72,34 +74,73 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
 
   Future<void> _saveEventToDatabase() async {
     if (_formKey.currentState!.validate()) {
-      final dbHelper = DatabaseHelper();
-      final eventDetails = {
-        'name': _nameController.text,
-        'date': _dateController.text,
-        'location': _locationController.text,
-        'description': _descriptionController.text,
-        'category': _category,
-      };
+      try {
+        final currentUser = await _firebaseHelper.getCurrentUser();
+        if (currentUser == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('User not logged in.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
 
-      if (_eventId == null) {
-        // Create new event
-        await dbHelper.insertEvent(eventDetails);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+        final eventDetails = {
+          'name': _nameController.text,
+          'date': _dateController.text,
+          'location': _locationController.text,
+          'description': _descriptionController.text,
+          'category': _category,
+          'userId': currentUser.id, // Add the current user's ID
+        };
+
+        if (_eventId == null) {
+          // Create new event
+          final newEvent = Event(
+            id: _firebaseHelper.events.doc().id,
+            name: eventDetails['name']!,
+            date: DateTime.parse(eventDetails['date']!),
+            location: eventDetails['location']!,
+            description: eventDetails['description']!,
+            category: eventDetails['category']!,
+            userId: eventDetails['userId']!,
+          );
+          await _firebaseHelper.insertEventInFirestore(newEvent);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
               content: Text('Event created successfully!'),
-              backgroundColor: Colors.green),
-        );
-      } else {
-        // Update existing event
-        await dbHelper.updateEvent(_eventId!, eventDetails);
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Update existing event
+          await _firebaseHelper.updateEventInFirestore(
+            eventId: _eventId!,
+            name: eventDetails['name'],
+            date: DateTime.parse(eventDetails['date']!),
+            category: eventDetails['category'],
+            location: eventDetails['location'],
+            description: eventDetails['description'],
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Event updated successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        Navigator.pop(context); // Return to the previous screen
+      } catch (e) {
+        print('Error saving event: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Event updated successfully!'),
-              backgroundColor: Colors.green),
+            content: Text('Failed to save event.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
-
-      Navigator.pop(context); // Return to the previous screen
     }
   }
 
@@ -135,12 +176,17 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
               ReusableTextField(
                 controller: _locationController,
                 labelText: 'Location',
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Please enter a location'
+                    : null,
               ),
               ReusableTextField(
-                controller: _descriptionController,
-                labelText: 'Description',
-                maxLines: 3,
-              ),
+                  controller: _descriptionController,
+                  labelText: 'Description',
+                  maxLines: 3,
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Please enter a short description'
+                      : null),
               EventCategoryDropdown(
                 value: _category,
                 onChanged: (value) {

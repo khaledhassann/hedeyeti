@@ -74,6 +74,7 @@ class Event {
       'category': category,
       'location': location,
       'description': description,
+      'userId': userId,
       // 'gifts': gifts.map((gift) => gift.toMap()).toList(), // If gifts need to be stored
     };
   }
@@ -87,6 +88,7 @@ class Event {
       'category': category,
       'location': location,
       'description': description,
+      'userId': userId
       // Gifts are excluded; stored in their own table
     };
   }
@@ -99,6 +101,7 @@ class Event {
       'category': category,
       'location': location,
       'description': description,
+      'userId': userId,
       // Exclude ID as Firestore generates its own
     };
   }
