@@ -126,6 +126,8 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
             category: gift.category,
             price: gift.price,
             status: gift.status,
+            pledgerId:
+                _isPledged ? userId : null, // Clear pledgerId if not pledged
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

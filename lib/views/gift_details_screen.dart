@@ -13,127 +13,97 @@ class GiftDetailsPage extends StatefulWidget {
 
 class _GiftDetailsPageState extends State<GiftDetailsPage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
-  late Gift gift;
-  bool isPledged = false; // Tracks whether the gift is already pledged
-  String? userId; // Logged-in user's ID
+  String? pledgerName;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _initializeGiftDetails();
-  }
 
-  Future<void> _initializeGiftDetails() async {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Gift) {
-      setState(() {
-        gift = args;
-        isPledged = gift.status == 'Pledged';
-      });
-
-      // Fetch logged-in user's ID
-      final currentUser = await _firebaseHelper.getCurrentUser();
-      setState(() {
-        userId = currentUser?.id;
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error: Gift details are missing.')),
-      );
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Gift?; // Get the gift
+    if (args == null) {
       Navigator.pop(context);
-    }
-  }
-
-  /// Handles the pledging of a gift.
-  Future<void> _pledgeGift() async {
-    if (isPledged) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You have already pledged this gift.')),
-      );
       return;
     }
 
-    try {
-      await _firebaseHelper.updateGiftInFirestore(
-        giftId: gift.id,
-        status: 'Pledged',
-        pledgerId: userId,
-      );
-
-      setState(() {
-        isPledged = true;
+    // Fetch pledger's name if available
+    if (args.pledgerId != null) {
+      _fetchPledgerName(args.pledgerId).then((name) {
+        if (mounted) {
+          setState(() {
+            pledgerName = name;
+          });
+        }
       });
+    }
+  }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('You pledged to buy "${gift.name}"'),
-          backgroundColor: Colors.green,
-        ),
-      );
+  Future<String?> _fetchPledgerName(String? pledgerId) async {
+    if (pledgerId == null) return null;
+
+    try {
+      final user = await _firebaseHelper.getUserFromFirestore(pledgerId);
+      return user?.name;
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error pledging the gift. Please try again later.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print('Error fetching pledger name: $e');
+      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Gift?; // Get the gift
+
+    if (args == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Gift Details')),
+        body: const Center(
+          child: Text('No gift details available.'),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gift Details'),
-      ),
-      body: gift == null
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    gift.name,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Category: ${gift.category}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Description:',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    gift.description?.isNotEmpty == true
-                        ? gift.description!
-                        : 'No description available.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Price: \$${gift.price.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const Spacer(),
-                  if (!isPledged)
-                    ElevatedButton.icon(
-                      onPressed: _pledgeGift,
-                      icon: const Icon(Icons.volunteer_activism),
-                      label: const Text('Pledge Gift'),
-                    ),
-                  if (isPledged)
-                    ElevatedButton.icon(
-                      onPressed: null,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Gift Pledged'),
-                    ),
-                ],
-              ),
+      appBar: AppBar(title: const Text('Gift Details')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Name: ${args.name}',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Category: ${args.category}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Price: \$${args.price}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Description: ${args.description ?? "No description provided"}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Status: ${args.status}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            if (pledgerName != null)
+              Text(
+                'Pledged by: $pledgerName',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

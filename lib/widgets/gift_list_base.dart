@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
+import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/widgets/empty_list_message.dart';
+import 'package:hedeyeti/widgets/gift_card.dart';
 
 class GiftListBase extends StatelessWidget {
   final String title;
@@ -10,7 +12,6 @@ class GiftListBase extends StatelessWidget {
   final bool showAddButton;
   final VoidCallback? onAddGift;
   final Function(int index)? onPledgeGift;
-  final Function(int index)? onViewGiftDetails;
   final Function(int index)? onGiftTap;
   final Function(int index)? onEditGift;
   final Function(int index)? onDeleteGift;
@@ -25,7 +26,6 @@ class GiftListBase extends StatelessWidget {
     this.showAddButton = false,
     this.onAddGift,
     this.onPledgeGift,
-    this.onViewGiftDetails,
     this.onGiftTap,
     this.onEditGift,
     this.onDeleteGift,
@@ -34,6 +34,8 @@ class GiftListBase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FirebaseHelper firebaseHelper = FirebaseHelper();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -64,30 +66,30 @@ class GiftListBase extends StatelessWidget {
               itemCount: gifts.length,
               itemBuilder: (context, index) {
                 final gift = gifts[index];
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: ListTile(
-                    onTap: () => onGiftTap?.call(index),
-                    leading: CircleAvatar(
-                      backgroundColor: gift.status == 'Pledged'
-                          ? Colors.red[100]
-                          : Colors.green[100],
-                      child: Icon(
-                        gift.status == 'Pledged'
-                            ? Icons.check
-                            : Icons.card_giftcard,
-                        color: gift.status == 'Pledged'
-                            ? Colors.red
-                            : Colors.green,
-                      ),
-                    ),
-                    title: Text(gift.name),
-                    subtitle: Text(
-                      'Category: ${gift.category} - \$${gift.price}',
-                    ),
-                    trailing: _buildActions(context, index, gift),
-                  ),
+                return FutureBuilder<String?>(
+                  future: gift.pledgerId != null
+                      ? firebaseHelper
+                          .getUserFromFirestore(gift.pledgerId!)
+                          .then((user) => user?.name)
+                      : Future.value(null),
+                  builder: (context, snapshot) {
+                    final pledgerName = snapshot.data;
+
+                    return GiftCard(
+                      gift: {
+                        'name': gift.name,
+                        'category': gift.category,
+                        'price': gift.price,
+                        'status': gift.status,
+                      },
+                      pledgerName: pledgerName,
+                      onPledge: () => onPledgeGift?.call(index),
+                      onTap: () => onGiftTap?.call(index),
+                      onDelete: canEdit && gift.status != 'Pledged'
+                          ? () => onDeleteGift?.call(index)
+                          : null, // Delete only if it's the user's gift and not pledged
+                    );
+                  },
                 );
               },
             ),
@@ -99,49 +101,5 @@ class GiftListBase extends StatelessWidget {
             )
           : null,
     );
-  }
-
-  Widget? _buildActions(BuildContext context, int index, Gift gift) {
-    if (canEdit) {
-      return PopupMenuButton<String>(
-        onSelected: (value) {
-          if (value == 'Edit') {
-            onEditGift?.call(index);
-          } else if (value == 'Delete') {
-            onDeleteGift?.call(index);
-          }
-        },
-        itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: 'Edit',
-            child: Text('Edit'),
-          ),
-          const PopupMenuItem(
-            value: 'Delete',
-            child: Text('Delete'),
-          ),
-        ],
-      );
-    }
-
-    if (canPledge) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () => onViewGiftDetails?.call(index),
-            tooltip: 'View Details',
-          ),
-          if (gift.status != 'Pledged')
-            TextButton(
-              onPressed: () => onPledgeGift?.call(index),
-              child: const Text('Pledge'),
-            ),
-        ],
-      );
-    }
-
-    return null;
   }
 }

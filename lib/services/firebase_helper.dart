@@ -316,13 +316,15 @@ class FirebaseHelper {
     try {
       final data = <String, dynamic>{}; // Initialize update map
       if (name != null) data['name'] = name; // Add name if provided
-      if (category != null)
+      if (category != null) {
         data['category'] = category; // Add category if provided
-      if (description != null)
+      }
+      if (description != null) {
         data['description'] = description; // Add description if provided
+      }
       if (price != null) data['price'] = price; // Add price if provided
       if (status != null) data['status'] = status; // Add status if provided
-      if (pledgerId != null) data['pledgerId'] = pledgerId;
+      data['pledger_id'] = pledgerId;
       await gifts.doc(giftId).update(data); // Update Firestore document
     } catch (e) {
       print('Error updating gift: $e');

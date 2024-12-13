@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
-import 'package:hedeyeti/models/LocalUser.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_gift_screen.dart';
 import 'package:hedeyeti/views/gift_details_screen.dart';
@@ -98,6 +97,41 @@ class _GiftListPageState extends State<GiftListPage> {
     );
   }
 
+  /// Deletes a gift.
+  Future<void> _deleteGift(int index) async {
+    final gift = gifts[index];
+
+    if (gift.status == 'Pledged') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot delete pledged gifts.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _firebaseHelper.deleteGiftInFirestore(gift.id);
+      setState(() {
+        gifts.removeAt(index);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gift deleted successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to delete gift.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   /// Sorts the gifts list based on the selected criteria.
   void _sortGifts(String sortBy) {
     setState(() {
@@ -120,7 +154,7 @@ class _GiftListPageState extends State<GiftListPage> {
         CreateEditGiftPage.routeName,
         arguments: {
           'gift': gift,
-          'eventId': gift.eventId
+          'eventId': gift.eventId,
         }, // Navigate to edit gift screen
       ).then((_) => _loadData());
     } else {
@@ -143,6 +177,9 @@ class _GiftListPageState extends State<GiftListPage> {
         onPledgeGift: _pledgeGift,
         onSort: _sortGifts,
         onGiftTap: _onGiftTap, // Handle tapping a gift
+        onDeleteGift: isMyList
+            ? _deleteGift
+            : null, // Enable deletion only for user's gifts
         showAddButton: isMyList,
         onAddGift: () {
           // Pass eventId when creating a new gift
