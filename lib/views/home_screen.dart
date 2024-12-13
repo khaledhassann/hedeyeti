@@ -288,8 +288,14 @@ class _HomePageState extends State<HomePage> {
                 );
               } else if (snapshot.hasError) {
                 return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: friend.profilePicture.isNotEmpty
+                        ? MemoryImage(base64Decode(friend.profilePicture))
+                        : const AssetImage('assets/default-avatar.png')
+                            as ImageProvider,
+                  ),
                   title: Text(friend.name),
-                  subtitle: Text('Error loading events'),
+                  subtitle: const Text('Error loading events'),
                   trailing: const Icon(Icons.error, color: Colors.red),
                 );
               } else {
@@ -297,7 +303,7 @@ class _HomePageState extends State<HomePage> {
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundImage: friend.profilePicture.isNotEmpty
-                        ? NetworkImage(friend.profilePicture)
+                        ? MemoryImage(base64Decode(friend.profilePicture))
                         : const AssetImage('assets/default-avatar.png')
                             as ImageProvider,
                   ),
