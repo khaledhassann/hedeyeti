@@ -170,6 +170,35 @@ class FirebaseHelper {
     }
   }
 
+  // Search user by email
+  Future<LocalUser?> searchUserByEmailInFirestore(String email) async {
+    try {
+      final querySnapshot = await users.where('email', isEqualTo: email).get();
+      if (querySnapshot.docs.isEmpty) return null;
+
+      final userDoc = querySnapshot.docs.first;
+      return LocalUser.fromFirestore(
+          userDoc.data() as Map<String, dynamic>, userDoc.id);
+    } catch (e) {
+      print('Error searching user by email: $e');
+      return null;
+    }
+  }
+
+  // Check if a user is a friend
+  Future<bool> isFriendInFirestore(String userId, String friendId) async {
+    try {
+      final friendDoc = await friends.doc(userId).get();
+      if (!friendDoc.exists) return false;
+
+      final friendList = List<String>.from(friendDoc['friendIds'] ?? []);
+      return friendList.contains(friendId);
+    } catch (e) {
+      print('Error checking if user is a friend: $e');
+      return false;
+    }
+  }
+
   // Fetch friends of a user and return a list of User objects
   Future<List<LocalUser>> getFriendsFromFirestore(String userId) async {
     try {
@@ -195,7 +224,7 @@ class FirebaseHelper {
     }
   }
 
-  // Event direct functions
+  //* Event direct functions
 
   // Add a new event to Firestore
   Future<void> insertEventInFirestore(Event event) async {

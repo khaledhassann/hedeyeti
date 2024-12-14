@@ -1,4 +1,3 @@
-// HomePage.dart
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -10,7 +9,6 @@ import 'package:hedeyeti/views/event_list_screen.dart';
 import 'package:hedeyeti/views/login_screen.dart';
 import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 import 'package:hedeyeti/views/profile_page_screen.dart';
-import '../services/database_helper.dart';
 
 class HomePage extends StatefulWidget {
   static const routeName = '/home';
@@ -23,9 +21,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
-  // final DatabaseHelper _dbHelper = DatabaseHelper();
   late Future<LocalUser> _userFuture; // Fetch logged-in user's data
   late Future<List<LocalUser>>? _friendsFuture; // Fetch friends' data
+
+  String _searchQuery = "";
+  List<Map<String, dynamic>> _searchResults = []; // User + Friendship status
 
   @override
   void initState() {
@@ -37,33 +37,11 @@ class _HomePageState extends State<HomePage> {
   /// Fetches the logged-in user's data from FirebaseHelper.
   Future<LocalUser> _fetchLoggedInUser() async {
     try {
-      // Use the FirebaseHelper to get the current user
       final userData = await _firebaseHelper.getCurrentUser();
-
-      // If userData is null, provide a default fallback user
-      if (userData == null) {
-        return LocalUser(
-          id: '',
-          name: 'Guest',
-          email: 'guest@example.com',
-          profilePicture: '',
-          isMe: true,
-          notificationPush: false,
-        );
-      }
-
-      return userData; // Return the fetched user
+      return userData ?? LocalUser.fallbackUser();
     } catch (e) {
       print('Error fetching logged-in user: $e');
-      // Provide a fallback user in case of an error
-      return LocalUser(
-        id: '',
-        name: 'Guest',
-        email: 'guest@example.com',
-        profilePicture: '',
-        isMe: true,
-        notificationPush: false,
-      );
+      return LocalUser.fallbackUser();
     }
   }
 
@@ -75,6 +53,60 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       print('Error fetching friends: $e');
       return [];
+    }
+  }
+
+  /// Search users by email and check if they are friends.
+  Future<void> _searchUsers(String email) async {
+    try {
+      final user = await _firebaseHelper.searchUserByEmailInFirestore(email);
+      if (user != null) {
+        final currentUser = await _firebaseHelper.getCurrentUser();
+        final isFriend =
+            await _firebaseHelper.isFriendInFirestore(currentUser!.id, user.id);
+        setState(() {
+          _searchResults = [
+            {'user': user, 'isFriend': isFriend},
+          ];
+        });
+      } else {
+        setState(() {
+          _searchResults = [];
+        });
+      }
+    } catch (e) {
+      print('Error searching users: $e');
+      setState(() {
+        _searchResults = [];
+      });
+    }
+  }
+
+  /// Add friend functionality.
+  Future<void> _addFriend(String userId, String friendId) async {
+    try {
+      await _firebaseHelper.addFriendInFirestore(userId, friendId);
+      setState(() {
+        _searchResults = _searchResults.map((result) {
+          if (result['user'].id == friendId) {
+            result['isFriend'] = true;
+          }
+          return result;
+        }).toList();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Friend added successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding friend: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -125,7 +157,7 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Implement search functionality
+              _showSearchDialog();
             },
           ),
         ],
@@ -178,6 +210,68 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Search Users'),
+          content: TextField(
+            decoration: const InputDecoration(hintText: 'Enter email...'),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _searchUsers(_searchQuery);
+              },
+              child: const Text('Search'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSearchResults(String userId) {
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: _searchResults.length,
+      itemBuilder: (context, index) {
+        final result = _searchResults[index];
+        final user = result['user'] as LocalUser;
+        final isFriend = result['isFriend'] as bool;
+
+        return ListTile(
+          leading: const Icon(Icons.person),
+          title: Text(user.name),
+          subtitle: Text(user.email),
+          trailing: isFriend
+              ? const Text(
+                  'Already friends',
+                  style: TextStyle(color: Colors.green),
+                )
+              : ElevatedButton.icon(
+                  onPressed: () => _addFriend(userId, user.id),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Friend'),
+                ),
+        );
+      },
     );
   }
 
@@ -311,18 +405,20 @@ class _HomePageState extends State<HomePage> {
                   subtitle: Text(events.isNotEmpty
                       ? 'Upcoming Events: ${events.length}'
                       : 'No Upcoming Events'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      EventListPage.routeName,
-                      arguments: {
-                        'id': friend.id,
-                        'name': friend.name,
-                        'events': events
-                      },
-                    );
-                  },
+                  trailing: IconButton(
+                    icon: const Icon(Icons.info_outline),
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        EventListPage.routeName,
+                        arguments: {
+                          'id': friend.id,
+                          'name': friend.name,
+                          'events': events,
+                        },
+                      );
+                    },
+                  ),
                 );
               }
             },

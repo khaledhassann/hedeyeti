@@ -64,4 +64,16 @@ class LocalUser {
       'notificationPush': notificationPush,
     };
   }
+
+  // Fallback user factory
+  factory LocalUser.fallbackUser() {
+    return LocalUser(
+      id: '',
+      name: 'Guest',
+      email: 'guest@example.com',
+      profilePicture: '', // Add a default profile picture path if needed
+      isMe: true,
+      notificationPush: false,
+    );
+  }
 }
