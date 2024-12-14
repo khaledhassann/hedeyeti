@@ -259,6 +259,20 @@ class FirebaseHelper {
     }
   }
 
+  // Fetch an event by it's ID
+  Future<Event?> getEventById(String eventId) async {
+    try {
+      final doc = await events.doc(eventId).get();
+      if (doc.exists) {
+        return Event.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching event by ID: $e');
+      return null;
+    }
+  }
+
   // Gift direct functions
 
   // Fetch gifts for a specific event

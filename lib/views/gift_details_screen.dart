@@ -50,6 +50,41 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
     }
   }
 
+  Widget _buildIconDetailRow(IconData icon, String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 24, color: Colors.deepPurple),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final args =
@@ -66,43 +101,21 @@ class _GiftDetailsPageState extends State<GiftDetailsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Gift Details')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Name: ${args.name}',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Category: ${args.category}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Price: \$${args.price}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Description: ${args.description ?? "No description provided"}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Status: ${args.status}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            if (pledgerName != null)
-              Text(
-                'Pledged by: $pledgerName',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-          ],
-        ),
+      body: ListView(
+        children: [
+          const SizedBox(height: 16),
+          _buildIconDetailRow(Icons.card_giftcard, 'Gift Name', args.name),
+          _buildIconDetailRow(Icons.category, 'Category', args.category),
+          _buildIconDetailRow(Icons.attach_money, 'Price', '\$${args.price}'),
+          _buildIconDetailRow(
+            Icons.description,
+            'Description',
+            args.description ?? 'No description provided',
+          ),
+          _buildIconDetailRow(Icons.info_outline, 'Status', args.status),
+          if (pledgerName != null)
+            _buildIconDetailRow(Icons.person, 'Pledged by', pledgerName!),
+        ],
       ),
     );
   }

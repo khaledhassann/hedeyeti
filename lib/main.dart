@@ -4,6 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/create_edit_gift_screen.dart';
+import 'package:hedeyeti/views/event_details_screen.dart';
 import 'package:hedeyeti/views/event_list_screen.dart';
 import 'package:hedeyeti/views/gift_details_screen.dart';
 import 'package:hedeyeti/views/gift_list_screen.dart';
@@ -47,6 +48,7 @@ class MyApp extends StatelessWidget {
         CreateEditGiftPage.routeName: (context) => const CreateEditGiftPage(),
         GiftListPage.routeName: (context) => const GiftListPage(),
         GiftDetailsPage.routeName: (context) => const GiftDetailsPage(),
+        EventDetailsPage.routeName: (context) => const EventDetailsPage(),
       },
       initialRoute: SplashScreen.routeName, // Start with Splash Screen
     );
