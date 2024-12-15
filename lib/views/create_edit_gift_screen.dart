@@ -22,6 +22,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
   late TextEditingController _priceController;
   String _category = 'Electronics';
   bool _isPledged = false;
+  bool _fieldsEnabled = true; // Track whether fields are enabled
   String? _giftId; // For editing
   late String _eventId; // To link the gift to an event
   String? _loggedInUserId; // Logged-in user's ID
@@ -31,25 +32,22 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Retrieve arguments from route
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
 
-    // Ensure event ID is passed
     if (args == null || !args.containsKey('eventId')) {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: Missing event ID.')),
         );
-        Navigator.pop(context); // Return to the previous screen
+        Navigator.pop(context);
       });
       return;
     }
 
     _eventId = args['eventId'] as String;
-    _giftId = args['gift']?.id; // Nullable for new gifts
+    _giftId = args['gift']?.id;
 
-    // Get the logged-in user's ID
     _firebaseHelper.getCurrentUser().then((user) {
       if (mounted) {
         setState(() {
@@ -58,7 +56,6 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
       }
     });
 
-    // Initialize controllers with existing data if editing
     _nameController = TextEditingController(text: args['gift']?.name ?? '');
     _descriptionController =
         TextEditingController(text: args['gift']?.description ?? '');
@@ -66,6 +63,9 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
         TextEditingController(text: args['gift']?.price?.toString() ?? '');
     _category = args['gift']?.category ?? 'Electronics';
     _isPledged = args['gift']?.status == 'Pledged';
+
+    // Update the fieldsEnabled state
+    _fieldsEnabled = !_isPledged;
   }
 
   @override
@@ -78,7 +78,6 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
 
   Future<void> _saveGiftToFirestore() async {
     if (_formKey.currentState!.validate()) {
-      // Ensure userId is fetched before proceeding
       final userId = _loggedInUserId;
 
       if (userId == null) {
@@ -91,15 +90,14 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
         return;
       }
 
-      final giftId = _giftId ??
-          _firebaseHelper.gifts.doc().id; // Generate a new ID if null
+      final giftId = _giftId ?? _firebaseHelper.gifts.doc().id;
 
       final gift = Gift(
         id: giftId,
         name: _nameController.text,
         description: _descriptionController.text.isNotEmpty
             ? _descriptionController.text
-            : null, // Ensure description is null if empty
+            : null,
         category: _category,
         price: double.tryParse(_priceController.text) ?? 0.0,
         status: _isPledged ? 'Pledged' : 'Available',
@@ -109,7 +107,6 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
 
       try {
         if (_giftId == null) {
-          // Insert new gift
           await _firebaseHelper.insertGiftInFirestore(gift);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -118,7 +115,6 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
             ),
           );
         } else {
-          // Update existing gift
           await _firebaseHelper.updateGiftInFirestore(
             giftId: gift.id,
             name: gift.name,
@@ -126,8 +122,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
             category: gift.category,
             price: gift.price,
             status: gift.status,
-            pledgerId:
-                _isPledged ? userId : null, // Clear pledgerId if not pledged
+            pledgerId: _isPledged ? userId : null,
           );
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -137,7 +132,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
           );
         }
 
-        Navigator.pop(context); // Close the screen
+        Navigator.pop(context);
       } catch (e) {
         print('Error saving gift: $e');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -164,43 +159,39 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
           key: _formKey,
           child: ListView(
             children: [
-              // Gift Name
               ReusableTextField(
                 controller: _nameController,
                 labelText: 'Gift Name',
+                enabled: _fieldsEnabled,
                 validator: (value) => value == null || value.isEmpty
                     ? 'Please enter a gift name'
                     : null,
               ),
-
               const SizedBox(height: 16),
-
-              // Description
               ReusableTextField(
                 controller: _descriptionController,
                 labelText: 'Description',
                 maxLines: 3,
+                enabled: _fieldsEnabled,
               ),
-
               const SizedBox(height: 16),
-
-              // Category Dropdown
               GiftCategoryDropdown(
                 value: _category,
-                onChanged: (value) {
-                  setState(() {
-                    _category = value!;
-                  });
-                },
+                enabled: _fieldsEnabled,
+                onChanged: _fieldsEnabled
+                    ? (value) {
+                        setState(() {
+                          _category = value!;
+                        });
+                      }
+                    : null,
               ),
-
               const SizedBox(height: 16),
-
-              // Price
               ReusableTextField(
                 controller: _priceController,
                 labelText: 'Price (EGP)',
                 keyboardType: TextInputType.number,
+                enabled: _fieldsEnabled,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a price';
@@ -211,23 +202,18 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
                   return null;
                 },
               ),
-
               const SizedBox(height: 16),
-
-              // Status Toggle
               SwitchListTile(
                 value: _isPledged,
                 onChanged: (value) {
                   setState(() {
                     _isPledged = value;
+                    _fieldsEnabled = !value; // Toggle fieldsEnabled
                   });
                 },
                 title: const Text('Mark as Pledged'),
               ),
-
               const SizedBox(height: 16),
-
-              // Save Button
               PrimaryButton(
                 text: 'Save Gift',
                 onPressed: _saveGiftToFirestore,
