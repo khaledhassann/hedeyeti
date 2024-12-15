@@ -170,6 +170,29 @@ class FirebaseHelper {
     }
   }
 
+  // FirebaseHelper.dart
+
+// Remove a friend from the user's friend list in Firestore
+  Future<void> removeFriendInFirestore(String userId, String friendId) async {
+    try {
+      final doc =
+          await friends.doc(userId).get(); // Fetch user's friends document
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        final friendIds =
+            List<String>.from(data['friendIds'] ?? []); // Parse friend IDs
+        if (friendIds.contains(friendId)) {
+          friendIds.remove(friendId); // Remove the friend ID
+          await friends
+              .doc(userId)
+              .update({'friendIds': friendIds}); // Update Firestore
+        }
+      }
+    } catch (e) {
+      print('Error removing friend: $e');
+    }
+  }
+
   // Search user by email
   Future<LocalUser?> searchUserByEmailInFirestore(String email) async {
     try {

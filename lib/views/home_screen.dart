@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/LocalUser.dart';
@@ -21,20 +21,29 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
-  late Future<LocalUser> _userFuture; // Fetch logged-in user's data
-  late Future<List<LocalUser>>? _friendsFuture; // Fetch friends' data
+  late Future<LocalUser> _userFuture;
+  final ValueNotifier<Future<List<LocalUser>>?> _friendsFutureNotifier =
+      ValueNotifier<Future<List<LocalUser>>?>(null);
 
   String _searchQuery = "";
-  List<Map<String, dynamic>> _searchResults = []; // User + Friendship status
+  final ValueNotifier<List<Map<String, dynamic>>> _searchResultsNotifier =
+      ValueNotifier<List<Map<String, dynamic>>>([]);
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _userFuture = _fetchLoggedInUser();
-    _friendsFuture = _fetchFriends();
+    // _friendsFuture = _fetchFriends();
+    _friendsFutureNotifier.value = _fetchFriends();
   }
 
-  /// Fetches the logged-in user's data from FirebaseHelper.
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Future<LocalUser> _fetchLoggedInUser() async {
     try {
       final userData = await _firebaseHelper.getCurrentUser();
@@ -45,7 +54,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Fetches the list of friends from Firestore.
   Future<List<LocalUser>> _fetchFriends() async {
     try {
       final currentUser = await _firebaseHelper.getCurrentUser();
@@ -56,47 +64,47 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Search users by email and check if they are friends.
   Future<void> _searchUsers(String email) async {
+    if (email.isEmpty) {
+      _searchResultsNotifier.value = [];
+      return;
+    }
+
     try {
       final user = await _firebaseHelper.searchUserByEmailInFirestore(email);
       if (user != null) {
         final currentUser = await _firebaseHelper.getCurrentUser();
         final isFriend =
             await _firebaseHelper.isFriendInFirestore(currentUser!.id, user.id);
-        setState(() {
-          _searchResults = [
-            {'user': user, 'isFriend': isFriend},
-          ];
-        });
+        _searchResultsNotifier.value = [
+          {'user': user, 'isFriend': isFriend},
+        ];
       } else {
-        setState(() {
-          _searchResults = [];
-        });
+        _searchResultsNotifier.value = [];
       }
     } catch (e) {
       print('Error searching users: $e');
-      setState(() {
-        _searchResults = [];
-      });
+      _searchResultsNotifier.value = [];
     }
   }
 
-  /// Add friend functionality.
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _searchUsers(query);
+    });
+  }
+
   Future<void> _addFriend(String userId, String friendId) async {
     try {
       await _firebaseHelper.addFriendInFirestore(userId, friendId);
-      setState(() {
-        _searchResults = _searchResults.map((result) {
-          if (result['user'].id == friendId) {
-            result['isFriend'] = true;
-          }
-          return result;
-        }).toList();
-      });
+
+      // Refresh the friends list
+      _friendsFutureNotifier.value = _fetchFriends();
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Friend added successfully!'),
+        const SnackBar(
+          content: Text('Friend added successfully!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -104,6 +112,32 @@ class _HomePageState extends State<HomePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error adding friend: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _removeFriend(String friendId) async {
+    try {
+      final currentUser = await _firebaseHelper.getCurrentUser();
+      if (currentUser == null) return;
+
+      await _firebaseHelper.removeFriendInFirestore(currentUser.id, friendId);
+
+      // Refresh the friends list
+      _friendsFutureNotifier.value = _fetchFriends();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Friend removed successfully!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error removing friend: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -153,14 +187,6 @@ class _HomePageState extends State<HomePage> {
             );
           },
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              _showSearchDialog();
-            },
-          ),
-        ],
       ),
       drawer: FutureBuilder<LocalUser>(
         future: _userFuture,
@@ -179,33 +205,100 @@ class _HomePageState extends State<HomePage> {
           return _buildDrawer(context, user);
         },
       ),
-      body: Column(
-        children: [
-          _buildCreateEventButton(context),
-          FutureBuilder<List<LocalUser>>(
-            future: _friendsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Expanded(
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              } else if (snapshot.hasError) {
-                return const Expanded(
-                  child: Center(child: Text('Failed to load friends data.')),
-                );
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Expanded(
-                  child: Center(
-                    child: Text(
-                      'No friends yet. Add some to see their events!',
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
+      body: FutureBuilder<LocalUser>(
+        future: _userFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError || snapshot.data == null) {
+            return const Center(child: Text('Failed to load user data.'));
+          }
+
+          final currentUser = snapshot.data!;
+          return Stack(
+            children: [
+              Column(
+                children: [
+                  _buildSearchBar(),
+                  _buildCreateEventButton(context),
+                  ValueListenableBuilder<Future<List<LocalUser>>?>(
+                    valueListenable: _friendsFutureNotifier,
+                    builder: (context, friendsFuture, child) {
+                      if (friendsFuture == null) {
+                        return const Center(
+                            child: Text('No friends to display.'));
+                      }
+                      return FutureBuilder<List<LocalUser>>(
+                        future: friendsFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Expanded(
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          } else if (snapshot.hasError) {
+                            return const Expanded(
+                              child: Center(
+                                  child: Text('Failed to load friends data.')),
+                            );
+                          } else if (!snapshot.hasData ||
+                              snapshot.data!.isEmpty) {
+                            return const Expanded(
+                              child: Center(
+                                child: Text(
+                                  'No friends yet. Add some to see their events!',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 16),
+                                ),
+                              ),
+                            );
+                          }
+
+                          final friends = snapshot.data!;
+                          return _buildFriendsList(friends);
+                        },
+                      );
+                    },
                   ),
+                ],
+              ),
+              _buildSearchOverlay(currentUser.id),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search by email...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+              ),
+              onChanged: _onSearchChanged, // Debounced search logic
+            ),
+          ),
+          ValueListenableBuilder<List<Map<String, dynamic>>>(
+            valueListenable: _searchResultsNotifier,
+            builder: (context, searchResults, child) {
+              if (searchResults.isNotEmpty) {
+                return IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    _searchResultsNotifier.value = []; // Clear search results
+                  },
                 );
               }
-
-              final friends = snapshot.data!;
-              return _buildFriendsList(friends);
+              return const SizedBox.shrink();
             },
           ),
         ],
@@ -213,68 +306,49 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Search Users'),
-          content: TextField(
-            decoration: const InputDecoration(hintText: 'Enter email...'),
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _searchUsers(_searchQuery);
-              },
-              child: const Text('Search'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildSearchResults(String userId) {
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: _searchResults.length,
-      itemBuilder: (context, index) {
-        final result = _searchResults[index];
-        final user = result['user'] as LocalUser;
-        final isFriend = result['isFriend'] as bool;
+    return ValueListenableBuilder<List<Map<String, dynamic>>>(
+      valueListenable: _searchResultsNotifier,
+      builder: (context, searchResults, child) {
+        if (searchResults.isEmpty) {
+          return const Center(
+            child: Text(
+              'No results found.',
+              style: TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+          );
+        }
 
-        return ListTile(
-          leading: const Icon(Icons.person),
-          title: Text(user.name),
-          subtitle: Text(user.email),
-          trailing: isFriend
-              ? const Text(
-                  'Already friends',
-                  style: TextStyle(color: Colors.green),
-                )
-              : ElevatedButton.icon(
-                  onPressed: () => _addFriend(userId, user.id),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Friend'),
-                ),
+        return ListView.builder(
+          shrinkWrap: true,
+          itemCount: searchResults.length,
+          itemBuilder: (context, index) {
+            final result = searchResults[index];
+            final user = result['user'] as LocalUser;
+            final isFriend = result['isFriend'] as bool;
+
+            return ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(user.name),
+              subtitle: Text(user.email),
+              trailing: isFriend
+                  ? const Text(
+                      'Already friends',
+                      style: TextStyle(color: Colors.green),
+                    )
+                  : ElevatedButton.icon(
+                      onPressed: () => _addFriend(userId, user.id),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Friend'),
+                    ),
+            );
+          },
         );
       },
     );
   }
 
+  // Remaining methods such as `_buildDrawer`, `_buildFriendsList` remain unchanged.
   Widget _buildDrawer(BuildContext context, LocalUser user) {
     return Drawer(
       child: SingleChildScrollView(
@@ -351,21 +425,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildCreateEventButton(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.pushNamed(context, CreateEditEventPage.routeName);
-        },
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 50),
-        ),
-        child: const Text('Create Your Own Event/List'),
-      ),
-    );
-  }
-
   Widget _buildFriendsList(List<LocalUser> friends) {
     return Expanded(
       child: ListView.builder(
@@ -395,6 +454,14 @@ class _HomePageState extends State<HomePage> {
               } else {
                 final events = snapshot.data ?? [];
                 return ListTile(
+                  onTap: () {
+                    Navigator.pushNamed(context, EventListPage.routeName,
+                        arguments: {
+                          'id': friend.id,
+                          'name': friend.name,
+                          'events': events,
+                        });
+                  },
                   leading: CircleAvatar(
                     backgroundImage: friend.profilePicture.isNotEmpty
                         ? MemoryImage(base64Decode(friend.profilePicture))
@@ -406,7 +473,7 @@ class _HomePageState extends State<HomePage> {
                       ? 'Upcoming Events: ${events.length}'
                       : 'No Upcoming Events'),
                   trailing: IconButton(
-                    icon: const Icon(Icons.info_outline),
+                    icon: const Icon(Icons.chevron_right),
                     onPressed: () {
                       Navigator.pushNamed(
                         context,
@@ -425,6 +492,67 @@ class _HomePageState extends State<HomePage> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildCreateEventButton(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ElevatedButton(
+        onPressed: () {
+          Navigator.pushNamed(context, CreateEditEventPage.routeName);
+        },
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 50),
+        ),
+        child: const Text('Create Your Own Event/List'),
+      ),
+    );
+  }
+
+  Widget _buildSearchOverlay(String userId) {
+    return ValueListenableBuilder<List<Map<String, dynamic>>>(
+      valueListenable: _searchResultsNotifier,
+      builder: (context, searchResults, child) {
+        if (searchResults.isEmpty) return const SizedBox.shrink();
+
+        return Positioned.fill(
+          child: GestureDetector(
+            onTap: () {
+              _searchResultsNotifier.value = []; // Clear search results
+            },
+            child: Container(
+              color: Colors.black.withOpacity(0.5), // Dimmed background
+              child: ListView.builder(
+                itemCount: searchResults.length,
+                itemBuilder: (context, index) {
+                  final result = searchResults[index];
+                  final user = result['user'] as LocalUser;
+                  final isFriend = result['isFriend'] as bool;
+
+                  return ListTile(
+                    leading: const Icon(Icons.person),
+                    title: Text(user.name),
+                    subtitle: Text(user.email),
+                    trailing: isFriend
+                        ? ElevatedButton.icon(
+                            onPressed: () => _removeFriend(user.id),
+                            icon: const Icon(
+                                Icons.remove_circle_outline_outlined),
+                            label: const Text('Remove'),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: () => _addFriend(userId, user.id),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add'),
+                          ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
