@@ -444,7 +444,7 @@ class _HomePageState extends State<HomePage> {
                   leading: CircleAvatar(
                     backgroundImage: friend.profilePicture.isNotEmpty
                         ? MemoryImage(base64Decode(friend.profilePicture))
-                        : const AssetImage('assets/default-avatar.png')
+                        : const AssetImage('assets/images.png')
                             as ImageProvider,
                   ),
                   title: Text(friend.name),
@@ -465,7 +465,7 @@ class _HomePageState extends State<HomePage> {
                   leading: CircleAvatar(
                     backgroundImage: friend.profilePicture.isNotEmpty
                         ? MemoryImage(base64Decode(friend.profilePicture))
-                        : const AssetImage('assets/default-avatar.png')
+                        : const AssetImage('assets/images.png')
                             as ImageProvider,
                   ),
                   title: Text(friend.name),
@@ -522,30 +522,77 @@ class _HomePageState extends State<HomePage> {
               _searchResultsNotifier.value = []; // Clear search results
             },
             child: Container(
-              color: Colors.black.withOpacity(0.5), // Dimmed background
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black54, Colors.black87],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
               child: ListView.builder(
+                padding: const EdgeInsets.all(16.0),
                 itemCount: searchResults.length,
                 itemBuilder: (context, index) {
                   final result = searchResults[index];
                   final user = result['user'] as LocalUser;
                   final isFriend = result['isFriend'] as bool;
 
-                  return ListTile(
-                    leading: const Icon(Icons.person),
-                    title: Text(user.name),
-                    subtitle: Text(user.email),
-                    trailing: isFriend
-                        ? ElevatedButton.icon(
-                            onPressed: () => _removeFriend(user.id),
-                            icon: const Icon(
-                                Icons.remove_circle_outline_outlined),
-                            label: const Text('Remove'),
-                          )
-                        : ElevatedButton.icon(
-                            onPressed: () => _addFriend(userId, user.id),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add'),
-                          ),
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    elevation: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10.0,
+                        horizontal: 16.0,
+                      ),
+                      leading: CircleAvatar(
+                        backgroundImage: user.profilePicture.isNotEmpty
+                            ? MemoryImage(base64Decode(user.profilePicture))
+                            : const AssetImage('assets/images.png')
+                                as ImageProvider,
+                        radius: 24,
+                      ),
+                      title: Text(
+                        user.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16.0,
+                        ),
+                      ),
+                      subtitle: Text(
+                        user.email,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14.0,
+                        ),
+                      ),
+                      trailing: isFriend
+                          ? OutlinedButton.icon(
+                              onPressed: () => _removeFriend(user.id),
+                              icon: const Icon(
+                                Icons.remove_circle_outline,
+                                color: Colors.red,
+                              ),
+                              label: const Text(
+                                'Remove',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            )
+                          : OutlinedButton.icon(
+                              onPressed: () => _addFriend(userId, user.id),
+                              icon: const Icon(
+                                Icons.add_circle_outline,
+                                color: Colors.green,
+                              ),
+                              label: const Text(
+                                'Add',
+                                style: TextStyle(color: Colors.green),
+                              ),
+                            ),
+                    ),
                   );
                 },
               ),
