@@ -192,7 +192,9 @@ class _HomePageState extends State<HomePage> {
                 child: CircleAvatar(
                   radius: 18,
                   backgroundImage: user.profilePicture.isNotEmpty
-                      ? MemoryImage(base64Decode(user.profilePicture))
+                      ? MemoryImage(
+                          base64Decode(user.profilePicture),
+                        )
                       : const AssetImage('assets/images.png') as ImageProvider,
                 ),
               ),

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,14 +14,42 @@ class ImageHelper {
     if (!hasPermission) return null;
 
     final pickedFile = await _imagePicker.pickImage(source: ImageSource.camera);
-    return pickedFile?.path;
+    if (pickedFile != null) {
+      // Compress the image
+      final compressedImage = await FlutterImageCompress.compressWithFile(
+        pickedFile.path,
+        quality: 85, // Adjust quality for compression
+      );
+      if (compressedImage != null) {
+        final base64Image = base64Encode(compressedImage);
+        return base64Image;
+      } else {
+        print('Error compressing image.');
+        return null;
+      }
+    }
+    return '';
   }
 
   /// Select an image from the gallery.
   static Future<String?> selectImage() async {
     final pickedFile =
         await _imagePicker.pickImage(source: ImageSource.gallery);
-    return pickedFile?.path;
+    if (pickedFile != null) {
+      // Compress the image
+      final compressedImage = await FlutterImageCompress.compressWithFile(
+        pickedFile.path,
+        quality: 85, // Adjust quality for compression
+      );
+      if (compressedImage != null) {
+        final base64Image = base64Encode(compressedImage);
+        return base64Image;
+      } else {
+        print('Error compressing image.');
+        return null;
+      }
+    }
+    return '';
   }
 
   /// Request camera permissions.

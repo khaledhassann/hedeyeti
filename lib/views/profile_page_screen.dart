@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/services/image_helper.dart';
 import 'package:image_picker/image_picker.dart'; // Add this package
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
@@ -93,13 +94,8 @@ class _ProfilePageState extends State<ProfilePage> {
               title: const Text('Choose from Gallery'),
               onTap: () async {
                 Navigator.pop(context);
-                final pickedFile =
-                    await _imagePicker.pickImage(source: ImageSource.gallery);
-                if (pickedFile != null) {
-                  final base64Image =
-                      base64Encode(await File(pickedFile.path).readAsBytes());
-                  _updateProfilePicture(base64Image);
-                }
+                final base64Image = await ImageHelper.selectImage();
+                _updateProfilePicture(base64Image ?? "");
               },
             ),
             ListTile(
@@ -107,13 +103,8 @@ class _ProfilePageState extends State<ProfilePage> {
               title: const Text('Capture with Camera'),
               onTap: () async {
                 Navigator.pop(context);
-                final pickedFile =
-                    await _imagePicker.pickImage(source: ImageSource.camera);
-                if (pickedFile != null) {
-                  final base64Image =
-                      base64Encode(await File(pickedFile.path).readAsBytes());
-                  _updateProfilePicture(base64Image);
-                }
+                final base64Image = await ImageHelper.captureImage(context);
+                _updateProfilePicture(base64Image ?? "");
               },
             ),
           ],
