@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart'; // Add this package
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
@@ -15,10 +18,12 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final ImagePicker _imagePicker = ImagePicker(); // Add ImagePicker instance
   Map<String, String> user = {}; // User info from Firebase
   List<Event> events = []; // User's events
-  bool emailNotifications = true; // Example notification setting
+  String profilePicture = ''; // Base64 string for profile picture
   bool pushNotifications = false; // Example notification setting
+  bool _dataChanged = false; // Track changes
 
   @override
   void initState() {
@@ -47,16 +52,202 @@ class _ProfilePageState extends State<ProfilePage> {
         'name': currentUser.name,
         'email': currentUser.email,
       };
+      profilePicture = currentUser.profilePicture; // Load profile picture
       events = userEvents ?? [];
-      emailNotifications = currentUser.notificationPush; // Example setting
       pushNotifications = currentUser.notificationPush; // Example setting
     });
   }
 
-  /// Updates user info in Firebase
+  /// Updates profile picture in Firestore
+  Future<void> _updateProfilePicture(String base64Image) async {
+    final currentUser = await _firebaseHelper.getCurrentUser();
+    if (currentUser == null) return;
+
+    await _firebaseHelper.updateUserInFirestore(
+      userId: currentUser.id,
+      profilePicture: base64Image,
+    );
+
+    setState(() {
+      profilePicture = base64Image;
+      _dataChanged = true; // Mark data as changed
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Profile picture updated successfully!'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  /// Picks an image from gallery or camera
+  Future<void> _pickImage() async {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo),
+              title: const Text('Choose from Gallery'),
+              onTap: () async {
+                Navigator.pop(context);
+                final pickedFile =
+                    await _imagePicker.pickImage(source: ImageSource.gallery);
+                if (pickedFile != null) {
+                  final base64Image =
+                      base64Encode(await File(pickedFile.path).readAsBytes());
+                  _updateProfilePicture(base64Image);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Capture with Camera'),
+              onTap: () async {
+                Navigator.pop(context);
+                final pickedFile =
+                    await _imagePicker.pickImage(source: ImageSource.camera);
+                if (pickedFile != null) {
+                  final base64Image =
+                      base64Encode(await File(pickedFile.path).readAsBytes());
+                  _updateProfilePicture(base64Image);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Toggles notification settings
+  void _toggleNotificationSetting(bool value) async {
+    setState(() {
+      pushNotifications = value;
+    });
+
+    final currentUser = await _firebaseHelper.getCurrentUser();
+    if (currentUser != null) {
+      await _firebaseHelper.updateUserInFirestore(
+        userId: currentUser.id,
+        notificationPush: value,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(
+            context, _dataChanged); // Pass the flag on back navigation
+        return false; // Prevent default pop behavior
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Profile'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              Navigator.pop(context, _dataChanged); // Return if data changed
+            },
+          ),
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            // Profile Picture Section
+            Center(
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundImage: profilePicture.isNotEmpty
+                        ? MemoryImage(base64Decode(profilePicture))
+                        : const AssetImage('assets/images.png')
+                            as ImageProvider,
+                  ),
+                  TextButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Change Profile Picture'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // User Info
+            Card(
+              margin: const EdgeInsets.only(bottom: 16.0),
+              child: ListTile(
+                title: Text('Username'),
+                subtitle: Text(user['name'] ?? 'Loading...'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _editUserInfo(),
+                ),
+              ),
+            ),
+
+            // Notification Settings
+            Card(
+              margin: const EdgeInsets.only(bottom: 16.0),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    value: pushNotifications,
+                    onChanged: (value) => _toggleNotificationSetting(value),
+                    title: const Text('Push Notifications'),
+                  ),
+                ],
+              ),
+            ),
+
+            // My Events
+            const Text(
+              'My Events',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ...events.map((event) {
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 4.0),
+                child: ListTile(
+                  title: Text(event.name),
+                  subtitle: Text('Date: ${event.formattedDate}'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () {
+                      Navigator.pushNamed(
+                        context,
+                        CreateEditEventPage.routeName,
+                        arguments: event,
+                      ).then((_) => _loadProfileData());
+                    },
+                  ),
+                ),
+              );
+            }).toList(),
+
+            // My Pledged Gifts Button
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, MyPledgedGiftsPage.routeName);
+              },
+              child: const Text('View My Pledged Gifts'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _editUserInfo() async {
     final nameController = TextEditingController(text: user['name']);
-    final emailController = TextEditingController(text: user['email']);
 
     await showDialog(
       context: context,
@@ -67,11 +258,7 @@ class _ProfilePageState extends State<ProfilePage> {
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: const InputDecoration(labelText: 'User name'),
             ),
           ],
         ),
@@ -83,7 +270,6 @@ class _ProfilePageState extends State<ProfilePage> {
           TextButton(
             onPressed: () async {
               final updatedName = nameController.text;
-              final updatedEmail = emailController.text;
 
               // Update in Firebase
               final currentUser = await _firebaseHelper.getCurrentUser();
@@ -91,11 +277,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 await _firebaseHelper.updateUserInFirestore(
                   userId: currentUser.id,
                   name: updatedName,
-                  email: updatedEmail,
                 );
                 setState(() {
                   user['name'] = updatedName;
-                  user['email'] = updatedEmail;
+                  _dataChanged = true; // Mark data as changed
                 });
               }
 
@@ -108,98 +293,6 @@ class _ProfilePageState extends State<ProfilePage> {
               );
             },
             child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Toggles notification settings
-  void _toggleNotificationSetting(bool value) async {
-    setState(() {
-      pushNotifications = value;
-    });
-
-    // Update in Firebase
-    final currentUser = await _firebaseHelper.getCurrentUser();
-    if (currentUser != null) {
-      await _firebaseHelper.updateUserInFirestore(
-        userId: currentUser.id,
-        notificationPush: value,
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          // User Info
-          Card(
-            margin: const EdgeInsets.only(bottom: 16.0),
-            child: ListTile(
-              title: Text(user['name'] ?? 'Loading...'),
-              subtitle: Text(user['email'] ?? 'Loading...'),
-              trailing: IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: _editUserInfo, // Edit user info
-              ),
-            ),
-          ),
-
-          // Notification Settings
-          Card(
-            margin: const EdgeInsets.only(bottom: 16.0),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  value: pushNotifications,
-                  onChanged: (value) => _toggleNotificationSetting(value),
-                  title: const Text('Push Notifications'),
-                ),
-              ],
-            ),
-          ),
-
-          // My Events
-          const Text(
-            'My Events',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          ...events.map((event) {
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4.0),
-              child: ListTile(
-                title: Text(event.name),
-                subtitle: Text('Date: ${event.formattedDate}'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.edit),
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      CreateEditEventPage.routeName,
-                      arguments: event, // Pass selected event data
-                    ).then(
-                        (_) => _loadProfileData()); // Reload events on return
-                  },
-                ),
-              ),
-            );
-          }).toList(),
-
-          // My Pledged Gifts Button
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pushNamed(context, MyPledgedGiftsPage.routeName);
-            },
-            child: const Text('View My Pledged Gifts'),
           ),
         ],
       ),

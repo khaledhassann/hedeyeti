@@ -407,8 +407,20 @@ class _HomePageState extends State<HomePage> {
             ListTile(
               leading: const Icon(Icons.settings),
               title: const Text('Manage profile'),
-              onTap: () {
-                Navigator.pushNamed(context, ProfilePage.routeName);
+              onTap: () async {
+                final dataChanged = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfilePage(),
+                  ),
+                );
+
+                // Reload the user data only if changes were made
+                if (dataChanged == true) {
+                  setState(() {
+                    _userFuture = _fetchLoggedInUser();
+                  });
+                }
               },
             ),
             ListTile(
