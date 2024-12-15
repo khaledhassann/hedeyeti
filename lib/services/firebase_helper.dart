@@ -416,6 +416,15 @@ class FirebaseHelper {
       final events = await getEventsForUserFromFireStore(userId);
       final eventIds = events?.map((event) => event.id).toSet() ?? {};
 
+      // Fetch the user's notificationPush preference
+      final currentUser = await getCurrentUser();
+      final userNotificationPush = currentUser!.notificationPush;
+
+      if (!userNotificationPush) {
+        print('Push notifications are disabled for this user.');
+        return; // Skip notifications if disabled
+      }
+
       for (var docChange in snapshot.docChanges) {
         if (docChange.type == DocumentChangeType.added) {
           final data = docChange.doc.data() as Map<String, dynamic>;
