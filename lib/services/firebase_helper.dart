@@ -8,6 +8,8 @@ import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/Gift.dart';
 import 'package:hedeyeti/models/LocalUser.dart';
 
+import 'notification_helper.dart';
+
 class FirebaseHelper {
   // Step 1: Create a private static instance of the class
   static final FirebaseHelper _instance = FirebaseHelper._internal();
@@ -107,7 +109,7 @@ class FirebaseHelper {
     }
   }
 
-  // LocalUser direct functions
+  //* LocalUser direct functions
 
   // Fetch a user document from Firestore by userId
   Future<LocalUser?> getUserFromFirestore(String userId) async {
@@ -169,8 +171,6 @@ class FirebaseHelper {
       print('Error adding friend: $e');
     }
   }
-
-  // FirebaseHelper.dart
 
 // Remove a friend from the user's friend list in Firestore
   Future<void> removeFriendInFirestore(String userId, String friendId) async {
@@ -325,7 +325,7 @@ class FirebaseHelper {
     }
   }
 
-  // Gift direct functions
+  //* Gift direct functions
 
   // Fetch gifts for a specific event
   Future<List<Gift>?> getGiftsForEventFromFirestore(String eventId) async {
@@ -406,5 +406,30 @@ class FirebaseHelper {
     } catch (e) {
       print('Error deleting gift: $e');
     }
+  }
+
+  void listenForPledgedGifts(String userId) {
+    gifts
+        .where('status', isEqualTo: 'Pledged')
+        .snapshots()
+        .listen((snapshot) async {
+      final events = await getEventsForUserFromFireStore(userId);
+      final eventIds = events?.map((event) => event.id).toSet() ?? {};
+
+      for (var docChange in snapshot.docChanges) {
+        if (docChange.type == DocumentChangeType.added) {
+          final data = docChange.doc.data() as Map<String, dynamic>;
+          final eventId = data['event_id'] as String;
+          print('Listening for pledged gifts...');
+          print('Gift pledged: $data');
+
+          // Check if the gift belongs to the user's events
+          if (eventIds.contains(eventId)) {
+            // Show the notification using the helper
+            await NotificationHelper.showGiftNotification(data);
+          }
+        }
+      }
+    });
   }
 }

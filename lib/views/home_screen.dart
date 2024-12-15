@@ -1,14 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/models/LocalUser.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
+import 'package:hedeyeti/services/notification_helper.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/event_list_screen.dart';
 import 'package:hedeyeti/views/login_screen.dart';
 import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 import 'package:hedeyeti/views/profile_page_screen.dart';
+
+import '../main.dart';
 
 class HomePage extends StatefulWidget {
   static const routeName = '/home';
@@ -36,12 +40,20 @@ class _HomePageState extends State<HomePage> {
     _userFuture = _fetchLoggedInUser();
     // _friendsFuture = _fetchFriends();
     _friendsFutureNotifier.value = _fetchFriends();
+    _initializeGiftNotifications();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _initializeGiftNotifications() async {
+    final currentUser = await _firebaseHelper.getCurrentUser();
+    if (currentUser != null) {
+      _firebaseHelper.listenForPledgedGifts(currentUser.id);
+    }
   }
 
   Future<LocalUser> _fetchLoggedInUser() async {
