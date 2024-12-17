@@ -386,6 +386,13 @@ class DatabaseHelper {
           where: 'id = ?',
           whereArgs: [giftObj.id],
         );
+        // Mark the gift as published in the local database
+        await db.update(
+          'events',
+          {'is_published': 1},
+          where: 'id = ?',
+          whereArgs: [eventObj.id],
+        );
       }
     }
   }
