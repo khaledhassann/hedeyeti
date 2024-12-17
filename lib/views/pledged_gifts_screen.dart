@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
+import 'package:hedeyeti/services/database_helper.dart';
 import '../services/firebase_helper.dart';
 
 class MyPledgedGiftsPage extends StatefulWidget {
@@ -14,6 +15,7 @@ class MyPledgedGiftsPage extends StatefulWidget {
 class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
   late Future<List<Gift>> _pledgedGiftsFuture;
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
   String? userId;
 
   @override
@@ -41,6 +43,15 @@ class _MyPledgedGiftsPageState extends State<MyPledgedGiftsPage> {
         giftId: gift.id,
         status: 'Available',
         pledgerId: null,
+      );
+      await _databaseHelper.updateGift(
+        gift.id,
+        gift
+            .copyWith(
+              status: 'Available',
+              pledgerId: null,
+            )
+            .toSQLite(),
       );
       setState(() {
         _pledgedGiftsFuture = _loadPledgedGifts();

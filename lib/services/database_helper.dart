@@ -352,26 +352,37 @@ class DatabaseHelper {
       final eventObj = Event.fromSQLite(event);
       await _firebaseHelper.insertEventInFirestore(eventObj);
 
-      // Mark the event as published in the local database
-      await db.update(
-        'events',
-        {'is_published': 1}, // Set is_published to true
-        where: 'id = ?',
-        whereArgs: [eventId],
-      );
-
       // Fetch gifts for the event
       final localGifts =
           await db.query('gifts', where: 'event_id = ?', whereArgs: [eventId]);
 
-      for (final gift in localGifts) {
-        final giftObj = Gift.fromMap(gift);
-        await _firebaseHelper.insertGiftInFirestore(giftObj);
+      for (final localGift in localGifts) {
+        final giftObj = Gift.fromMap(localGift);
+
+        // Fetch the latest gift data from Firestore
+        final remoteGift = await _firebaseHelper.getGiftById(giftObj.id);
+
+        // Determine whether to publish the gift
+        if (remoteGift != null && remoteGift.status == 'Pledged') {
+          // Check if the pledger is someone else
+          if (remoteGift.pledgerId != userId) {
+            print(
+                'Skipping update for gift ${giftObj.id} as it is pledged by another user.');
+            continue; // Skip this gift
+          }
+        }
+
+        // Update Firestore with the local gift (Available or Pledged by the user)
+        final updatedGift = giftObj.copyWith(
+          pledgerId: giftObj.status == 'Pledged' ? userId : null,
+        );
+
+        await _firebaseHelper.insertGiftInFirestore(updatedGift);
 
         // Mark the gift as published in the local database
         await db.update(
           'gifts',
-          {'is_published': 1}, // Set is_published to true
+          {'is_published': 1},
           where: 'id = ?',
           whereArgs: [giftObj.id],
         );

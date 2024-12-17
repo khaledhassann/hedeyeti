@@ -328,6 +328,20 @@ class FirebaseHelper {
 
   //* Gift direct functions
 
+  // Fetch an event by it's ID
+  Future<Gift?> getGiftById(String giftId) async {
+    try {
+      final doc = await gifts.doc(giftId).get();
+      if (doc.exists) {
+        return Gift.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching gift by ID: $e');
+      return null;
+    }
+  }
+
   // Fetch gifts for a specific event
   Future<List<Gift>?> getGiftsForEventFromFirestore(String eventId) async {
     try {

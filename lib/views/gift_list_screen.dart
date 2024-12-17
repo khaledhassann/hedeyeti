@@ -149,7 +149,7 @@ class _GiftListPageState extends State<GiftListPage> {
         return;
       }
 
-      // Determine if the list belongs to the logged-in user
+      // Determine if the list belongs to the current user
       setState(() {
         isMyList = ownerId == userId;
       });
@@ -165,19 +165,19 @@ class _GiftListPageState extends State<GiftListPage> {
       List<Gift> remoteGifts = [];
 
       if (isMyList) {
-        // Fetch local gifts from SQLite for the logged-in user's event
+        // Fetch local gifts for the logged-in user
         localGifts = await dbHelper.getGiftsForEvent(eventId!);
       }
 
-      // Fetch gifts for the event from Firestore
+      // Fetch gifts from Firestore
       remoteGifts =
           await _firebaseHelper.getGiftsForEventFromFirestore(eventId!) ?? [];
 
-      // Combine gifts, ensuring no duplicates (local gifts take precedence)
+      // Combine gifts, ensuring remote gifts take precedence over local ones
       final combinedGifts = [
-        ...localGifts,
-        ...remoteGifts.where((remoteGift) =>
-            !localGifts.any((localGift) => localGift.id == remoteGift.id)),
+        ...remoteGifts,
+        ...localGifts.where((localGift) =>
+            !remoteGifts.any((remoteGift) => remoteGift.id == localGift.id)),
       ];
 
       setState(() {
@@ -200,6 +200,11 @@ class _GiftListPageState extends State<GiftListPage> {
       status: 'Pledged',
       pledgerId: userId,
     );
+    await _databaseHelper.updateGift(
+        gift.id,
+        gift
+            .copyWith(status: 'Pledged', pledgerId: userId, isPublished: true)
+            .toSQLite());
 
     setState(() {
       gifts[index] = gift.copyWith(
