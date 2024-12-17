@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Gift.dart';
+import '../services/database_helper.dart';
 import '../services/firebase_helper.dart';
 import '../widgets/reusable_text_field.dart';
 import '../widgets/gift_category_dropdown.dart';
@@ -103,6 +104,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
         status: _isPledged ? 'Pledged' : 'Available',
         eventId: _eventId,
         pledgerId: _isPledged ? userId : null,
+        isPublished: true,
       );
 
       try {
@@ -135,6 +137,66 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
         Navigator.pop(context);
       } catch (e) {
         print('Error saving gift: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save gift: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveGiftToLocalDatabase() async {
+    if (_formKey.currentState!.validate()) {
+      final userId = _loggedInUserId;
+
+      if (userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Unable to determine logged-in user.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      final dbHelper = DatabaseHelper();
+
+      // Generate a new ID if the gift is being created
+      final giftId =
+          _giftId ?? DateTime.now().millisecondsSinceEpoch.toString();
+
+      final gift = Gift(
+        id: giftId,
+        name: _nameController.text,
+        description: _descriptionController.text.isNotEmpty
+            ? _descriptionController.text
+            : null,
+        category: _category,
+        price: double.tryParse(_priceController.text) ?? 0.0,
+        status: _isPledged ? 'Pledged' : 'Available',
+        eventId: _eventId,
+        pledgerId: _isPledged ? userId : null,
+        isPublished: false,
+      );
+
+      try {
+        // Insert or update the gift in SQLite
+        await dbHelper.insertGift(gift);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_giftId == null
+                ? 'Gift saved locally!'
+                : 'Gift updated locally!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        Navigator.pop(context, true); // Optionally return success status
+      } catch (e) {
+        print('Error saving gift to local database: $e');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to save gift: $e'),
@@ -216,7 +278,7 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
               const SizedBox(height: 16),
               PrimaryButton(
                 text: 'Save Gift',
-                onPressed: _saveGiftToFirestore,
+                onPressed: _saveGiftToLocalDatabase,
                 snackbarMessage: 'Gift saved successfully!',
                 snackbarColor: Colors.green,
               ),

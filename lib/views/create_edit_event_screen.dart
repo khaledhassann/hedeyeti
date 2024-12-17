@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
 import '../models/Event.dart';
+import '../models/LocalUser.dart';
+import '../services/database_helper.dart';
 import '../widgets/event_category_dropdown.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/reusable_text_field.dart';
@@ -104,6 +106,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
             description: eventDetails['description']!,
             category: eventDetails['category']!,
             userId: eventDetails['userId']!,
+            isPublished: true,
           );
           await _firebaseHelper.insertEventInFirestore(newEvent);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -141,6 +144,28 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
         );
       }
     }
+  }
+
+  Future<void> _saveEventLocally() async {
+    final dbHelper = DatabaseHelper();
+    LocalUser loggedInUser = await dbHelper.getUser();
+    final loggedInUserId = loggedInUser.id;
+
+    final event = Event(
+      id: _eventId ?? DateTime.now().toIso8601String(),
+      name: _nameController.text,
+      date: DateTime.parse(_dateController.text),
+      category: _category,
+      location: _locationController.text,
+      description: _descriptionController.text,
+      userId: loggedInUserId,
+      isPublished: false,
+    );
+
+    await dbHelper.insertEvent(event.toSQLite());
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('Event saved locally!')));
+    Navigator.pop(context);
   }
 
   @override
@@ -196,7 +221,8 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
               ),
               PrimaryButton(
                 text: 'Save Event',
-                onPressed: _saveEventToDatabase,
+                // onPressed: _saveEventToDatabase,
+                onPressed: _saveEventLocally,
                 snackbarMessage: 'Event saved successfully!',
                 snackbarColor: Colors.green,
               ),

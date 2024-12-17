@@ -3,6 +3,7 @@ import 'package:hedeyeti/models/Gift.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:hedeyeti/views/create_edit_gift_screen.dart';
 import 'package:hedeyeti/views/gift_details_screen.dart';
+import '../services/database_helper.dart';
 import '../widgets/gift_list_base.dart';
 
 class GiftListPage extends StatefulWidget {
@@ -16,6 +17,7 @@ class GiftListPage extends StatefulWidget {
 
 class _GiftListPageState extends State<GiftListPage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
   List<Gift> gifts = [];
   bool isMyList = false; // Whether the gifts belong to the logged-in user
   String title = 'Gifts'; // Dynamic title for the page
@@ -29,6 +31,106 @@ class _GiftListPageState extends State<GiftListPage> {
     _loadData();
   }
 
+  // Future<void> _loadData() async {
+  //   final args = ModalRoute.of(context)?.settings.arguments;
+
+  //   if (args is Map<String, dynamic>) {
+  //     eventId = args['eventId'] as String? ?? '';
+  //     ownerId = args['ownerId'] as String? ?? '';
+
+  //     final currentUser = await _firebaseHelper.getCurrentUser();
+  //     userId = currentUser?.id;
+
+  //     if (eventId == null || ownerId == null) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Error: Missing event or owner data.')),
+  //       );
+  //       return;
+  //     }
+
+  //     // Determine if the list belongs to the current user
+  //     setState(() {
+  //       isMyList = ownerId == userId;
+  //     });
+
+  //     // Fetch the owner's name
+  //     final ownerData = await _firebaseHelper.getUserFromFirestore(ownerId!);
+  //     setState(() {
+  //       title =
+  //           isMyList ? 'My Gifts' : "${ownerData?.name ?? "Friend"}'s Gifts";
+  //     });
+
+  //     // Fetch gifts for the event
+  //     final fetchedGifts =
+  //         await _firebaseHelper.getGiftsForEventFromFirestore(eventId!);
+  //     setState(() {
+  //       gifts = fetchedGifts ?? [];
+  //     });
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Error: Invalid arguments.')),
+  //     );
+  //   }
+  // }
+
+  // Future<void> _loadData() async {
+  //   final args = ModalRoute.of(context)?.settings.arguments;
+
+  //   if (args is Map<String, dynamic>) {
+  //     eventId = args['eventId'] as String? ?? '';
+  //     ownerId = args['ownerId'] as String? ?? '';
+
+  //     final dbHelper = DatabaseHelper();
+  //     final currentUser = await _firebaseHelper.getCurrentUser();
+  //     userId = currentUser?.id;
+
+  //     if (eventId == null || ownerId == null) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(content: Text('Error: Missing event or owner data.')),
+  //       );
+  //       return;
+  //     }
+
+  //     // Determine if the list belongs to the current user
+  //     setState(() {
+  //       isMyList = ownerId == userId;
+  //     });
+
+  //     // Fetch the owner's name
+  //     final ownerData = await _firebaseHelper.getUserFromFirestore(ownerId!);
+  //     setState(() {
+  //       title =
+  //           isMyList ? 'My Gifts' : "${ownerData?.name ?? "Friend"}'s Gifts";
+  //     });
+
+  //     List<Gift> localGifts = [];
+  //     List<Gift> remoteGifts = [];
+
+  //     if (isMyList) {
+  //       // Fetch local gifts from SQLite for the current user
+  //       localGifts = await dbHelper.getGiftsForEvent(eventId!);
+  //     }
+
+  //     // Fetch remote gifts from Firestore
+  //     remoteGifts =
+  //         await _firebaseHelper.getGiftsForEventFromFirestore(eventId!) ?? [];
+
+  //     // Combine gifts, prioritizing local gifts over remote ones if IDs match
+  //     final combinedGifts = [
+  //       ...localGifts,
+  //       ...remoteGifts.where((remoteGift) =>
+  //           !localGifts.any((localGift) => localGift.id == remoteGift.id)),
+  //     ];
+
+  //     setState(() {
+  //       gifts = combinedGifts;
+  //     });
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Error: Invalid arguments.')),
+  //     );
+  //   }
+  // }
   Future<void> _loadData() async {
     final args = ModalRoute.of(context)?.settings.arguments;
 
@@ -36,6 +138,7 @@ class _GiftListPageState extends State<GiftListPage> {
       eventId = args['eventId'] as String? ?? '';
       ownerId = args['ownerId'] as String? ?? '';
 
+      final dbHelper = DatabaseHelper();
       final currentUser = await _firebaseHelper.getCurrentUser();
       userId = currentUser?.id;
 
@@ -46,7 +149,7 @@ class _GiftListPageState extends State<GiftListPage> {
         return;
       }
 
-      // Determine if the list belongs to the current user
+      // Determine if the list belongs to the logged-in user
       setState(() {
         isMyList = ownerId == userId;
       });
@@ -58,11 +161,27 @@ class _GiftListPageState extends State<GiftListPage> {
             isMyList ? 'My Gifts' : "${ownerData?.name ?? "Friend"}'s Gifts";
       });
 
-      // Fetch gifts for the event
-      final fetchedGifts =
-          await _firebaseHelper.getGiftsForEventFromFirestore(eventId!);
+      List<Gift> localGifts = [];
+      List<Gift> remoteGifts = [];
+
+      if (isMyList) {
+        // Fetch local gifts from SQLite for the logged-in user's event
+        localGifts = await dbHelper.getGiftsForEvent(eventId!);
+      }
+
+      // Fetch gifts for the event from Firestore
+      remoteGifts =
+          await _firebaseHelper.getGiftsForEventFromFirestore(eventId!) ?? [];
+
+      // Combine gifts, ensuring no duplicates (local gifts take precedence)
+      final combinedGifts = [
+        ...localGifts,
+        ...remoteGifts.where((remoteGift) =>
+            !localGifts.any((localGift) => localGift.id == remoteGift.id)),
+      ];
+
       setState(() {
-        gifts = fetchedGifts ?? [];
+        gifts = combinedGifts;
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -113,6 +232,7 @@ class _GiftListPageState extends State<GiftListPage> {
 
     try {
       await _firebaseHelper.deleteGiftInFirestore(gift.id);
+      await _databaseHelper.deleteGift(gift.id);
       setState(() {
         gifts.removeAt(index);
       });

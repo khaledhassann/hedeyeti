@@ -41,6 +41,17 @@ class LocalUser {
       notificationPush: map['notificationPush'] == true,
     );
   }
+  factory LocalUser.fromFirestoreLoggedInUser(
+      Map<String, dynamic> map, String id) {
+    return LocalUser(
+      id: id, // Directly use Firestore ID as String
+      name: map['name'] ?? 'Unknown User',
+      email: map['email'] ?? 'No Email',
+      profilePicture: map['profilePicture'] ?? 'assets/images.png',
+      isMe: true, // Firestore users are friends, not the logged-in user
+      notificationPush: map['notificationPush'] == true,
+    );
+  }
 
   // Convert to SQLite map
   Map<String, dynamic> toSQLite() {

@@ -98,7 +98,8 @@ class FirebaseHelper {
         final userDoc =
             await users.doc(currentUser.uid).get(); // Fetch Firestore document
         if (userDoc.exists) {
-          return LocalUser.fromFirestore(userDoc.data() as Map<String, dynamic>,
+          return LocalUser.fromFirestoreLoggedInUser(
+              userDoc.data() as Map<String, dynamic>,
               userDoc.id); // Parse user data
         }
       }

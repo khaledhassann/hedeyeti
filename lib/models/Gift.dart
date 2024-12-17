@@ -9,6 +9,7 @@ class Gift {
   String status; // Available, Pledged, Completed
   String eventId; // ID of the associated Event (String)
   String? pledgerId; // ID of the user who pledged for this gift (String)
+  bool isPublished;
 
   Gift({
     required this.id, // Now required and non-nullable
@@ -19,6 +20,7 @@ class Gift {
     required this.status,
     required this.eventId,
     this.pledgerId,
+    required this.isPublished,
   });
 
   /// Factory constructor to create Gift from a Map (e.g., SQLite)
@@ -32,6 +34,7 @@ class Gift {
       status: map['status'] as String,
       eventId: map['event_id'] as String,
       pledgerId: map['pledger_id'] as String?,
+      isPublished: map['is_published'] == 1,
     );
   }
 
@@ -47,6 +50,7 @@ class Gift {
       eventId:
           map['event_id'] as String, // Ensure this is provided in Firestore
       pledgerId: map['pledger_id'] as String?,
+      isPublished: true,
     );
   }
 
@@ -61,6 +65,7 @@ class Gift {
       'status': status,
       'event_id': eventId,
       'pledger_id': pledgerId,
+      'is_published': isPublished ? 1 : 0,
     };
   }
 
@@ -75,6 +80,7 @@ class Gift {
       'status': status,
       'event_id': eventId,
       'pledger_id': pledgerId,
+      'is_published': isPublished ? 1 : 0,
     };
   }
 
@@ -100,6 +106,7 @@ class Gift {
     String? status,
     String? eventId,
     String? pledgerId,
+    bool? isPublished,
   }) {
     return Gift(
       id: id ?? this.id,
@@ -110,6 +117,7 @@ class Gift {
       status: status ?? this.status,
       eventId: eventId ?? this.eventId,
       pledgerId: pledgerId ?? this.pledgerId,
+      isPublished: isPublished ?? this.isPublished,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hedeyeti/models/Event.dart';
 import 'package:hedeyeti/views/create_edit_event_screen.dart';
 import 'package:hedeyeti/views/gift_list_screen.dart';
+import '../services/database_helper.dart';
 import '../services/firebase_helper.dart';
 import '../widgets/deletion_confirmation_dialog.dart';
 import '../widgets/empty_list_message.dart';
@@ -18,6 +19,7 @@ class EventListPage extends StatefulWidget {
 
 class _EventListPageState extends State<EventListPage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
   String? _currentUserId;
   String? _friendId;
   String _title = 'Events';
@@ -51,18 +53,79 @@ class _EventListPageState extends State<EventListPage> {
     }
   }
 
+  // Future<void> _loadEvents() async {
+  //   if (_friendId != null) {
+  //     final events =
+  //         await _firebaseHelper.getEventsForUserFromFireStore(_friendId!);
+  //     setState(() {
+  //       _events = events ?? [];
+  //     });
+  //   }
+  // }
+  // Future<void> _loadEvents() async {
+  //   final dbHelper = DatabaseHelper();
+  //   List<Event> localEvents = (await dbHelper.getEventsForUser(_currentUserId!))
+  //       .map((e) => Event.fromSQLite(e))
+  //       .toList();
+
+  //   final remoteEvents =
+  //       await _firebaseHelper.getEventsForUserFromFireStore(_currentUserId!);
+
+  //   // Combine local and remote events
+  // final combinedEvents = [
+  //   ...localEvents,
+  //   if (remoteEvents != null)
+  //     ...remoteEvents.where((remoteEvent) => !localEvents.any(
+  //           (localEvent) => localEvent.id == remoteEvent.id,
+  //         )),
+  // ];
+
+  //   setState(() {
+  //     _events = combinedEvents;
+  //   });
+  // }
+
   Future<void> _loadEvents() async {
+    final dbHelper = DatabaseHelper();
+
     if (_friendId != null) {
-      final events =
-          await _firebaseHelper.getEventsForUserFromFireStore(_friendId!);
-      setState(() {
-        _events = events ?? [];
-      });
+      if (_friendId == _currentUserId) {
+        // Load events for the logged-in user (local + Firestore)
+        List<Event> localEvents =
+            (await dbHelper.getEventsForUser(_currentUserId!))
+                .map((e) => Event.fromSQLite(e))
+                .toList();
+
+        final remoteEvents = await _firebaseHelper
+            .getEventsForUserFromFireStore(_currentUserId!);
+
+        // Combine local and remote events, avoiding duplicates
+        final combinedEvents = [
+          ...localEvents,
+          if (remoteEvents != null)
+            ...remoteEvents.where((remoteEvent) => !localEvents.any(
+                  (localEvent) => localEvent.id == remoteEvent.id,
+                )),
+        ];
+
+        setState(() {
+          _events = combinedEvents;
+        });
+      } else {
+        // Load events for a friend (only Firestore)
+        final friendEvents =
+            await _firebaseHelper.getEventsForUserFromFireStore(_friendId!);
+
+        setState(() {
+          _events = friendEvents ?? [];
+        });
+      }
     }
   }
 
   Future<void> _deleteEvent(String eventId, int index) async {
     await _firebaseHelper.deleteEventInFirestore(eventId);
+    await _databaseHelper.deleteEvent(eventId);
     setState(() {
       _events.removeAt(index);
     });

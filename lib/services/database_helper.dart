@@ -1,9 +1,13 @@
 // DatabaseHelper.dart
 // THIS FILE WILL HOST ANYTHING RELATED TO THE SQLITE IMPLEMENTATION
 import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:hedeyeti/services/firebase_helper.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../models/Event.dart';
+import '../models/Gift.dart';
 import '../models/LocalUser.dart';
 
 class DatabaseHelper {
@@ -11,6 +15,7 @@ class DatabaseHelper {
   factory DatabaseHelper() => _instance;
 
   static Database? _database;
+  final FirebaseHelper _firebaseHelper = FirebaseHelper();
 
   DatabaseHelper._internal();
 
@@ -23,50 +28,67 @@ class DatabaseHelper {
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'hedieaty.db');
+    print('Initializing database at: $path');
     return await openDatabase(
       path,
-      version: 2, // Incremented version for schema changes
+      version: 1, // Incremented version for schema changes
+      onConfigure: (db) async {
+        // Use rawQuery since PRAGMA returns results.
+        await db.rawQuery("PRAGMA journal_mode = DELETE;");
+      },
       onCreate: _onCreate,
-      onUpgrade: _onUpgrade, // Handle migrations
     );
   }
 
+  /// Creates all required tables during the database initialization.
   Future<void> _onCreate(Database db, int version) async {
+    print('Creating database tables...');
+
+    // Users table
     await db.execute('''
       CREATE TABLE users (
-        id TEXT PRIMARY KEY, -- Changed from INTEGER to TEXT
+        id TEXT PRIMARY KEY,
         name TEXT,
         email TEXT,
         profilePicture TEXT,
-        isMe INTEGER
+        isMe INTEGER,
+        notificationPush INTEGER
       )
     ''');
+
+    // Events table
     await db.execute('''
       CREATE TABLE events (
-        id TEXT PRIMARY KEY, -- Changed from INTEGER to TEXT (Firestore Event ID)
+        id TEXT PRIMARY KEY,
         name TEXT,
         date TEXT,
         location TEXT,
         description TEXT,
         category TEXT,
-        user_id TEXT, -- Changed from INTEGER to TEXT
+        user_id TEXT,
+        is_published INTEGER DEFAULT 1,
         FOREIGN KEY (user_id) REFERENCES users(id)
       )
     ''');
+
+    // Gifts table
     await db.execute('''
       CREATE TABLE gifts (
-        id TEXT PRIMARY KEY, -- Changed from INTEGER to TEXT
+        id TEXT PRIMARY KEY,
         name TEXT,
         description TEXT,
         category TEXT,
         price REAL,
         status TEXT,
-        event_id TEXT, -- Changed from INTEGER to TEXT
-        pledger_id TEXT, -- Changed from INTEGER to TEXT
+        event_id TEXT,
+        pledger_id TEXT,
+        is_published INTEGER DEFAULT 1,
         FOREIGN KEY (event_id) REFERENCES events(id),
         FOREIGN KEY (pledger_id) REFERENCES users(id)
       )
     ''');
+
+    // Friends table
     await db.execute('''
       CREATE TABLE friends (
         user_id TEXT,
@@ -76,91 +98,37 @@ class DatabaseHelper {
         FOREIGN KEY (friend_id) REFERENCES users(id)
       )
     ''');
+
+    print('Database tables created successfully.');
   }
 
-  // Handle database migrations
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Example migration: Change 'id' fields from INTEGER to TEXT
-      // This is a simplified example. In a real-world scenario, data migration would be required.
-      // You might need to create new tables, copy data, and rename tables.
-
-      // Create new tables with TEXT IDs
-      await db.execute('''
-        CREATE TABLE users_new (
-          id TEXT PRIMARY KEY,
-          name TEXT,
-          email TEXT,
-          profilePicture TEXT,
-          isMe INTEGER
-        )
-      ''');
-
-      await db.execute('''
-        CREATE TABLE events_new (
-          id TEXT PRIMARY KEY,
-          name TEXT,
-          date TEXT,
-          location TEXT,
-          description TEXT,
-          category TEXT,
-          user_id TEXT,
-          FOREIGN KEY (user_id) REFERENCES users_new(id)
-        )
-      ''');
-
-      await db.execute('''
-        CREATE TABLE gifts_new (
-          id TEXT PRIMARY KEY,
-          name TEXT,
-          description TEXT,
-          category TEXT,
-          price REAL,
-          status TEXT,
-          event_id TEXT,
-          pledger_id TEXT,
-          FOREIGN KEY (event_id) REFERENCES events_new(id),
-          FOREIGN KEY (pledger_id) REFERENCES users_new(id)
-        )
-      ''');
-
-      await db.execute('''
-        CREATE TABLE friends_new (
-          user_id TEXT,
-          friend_id TEXT,
-          PRIMARY KEY (user_id, friend_id),
-          FOREIGN KEY (user_id) REFERENCES users_new(id),
-          FOREIGN KEY (friend_id) REFERENCES users_new(id)
-        )
-      ''');
-
-      // Copy data from old tables to new tables
-      // This assumes that you have a way to map integer IDs to Firestore string IDs
-      // For simplicity, this step is omitted. Implement according to your specific needs.
-
-      // Drop old tables
-      await db.execute('DROP TABLE users;');
-      await db.execute('DROP TABLE events;');
-      await db.execute('DROP TABLE gifts;');
-      await db.execute('DROP TABLE friends;');
-
-      // Rename new tables to original names
-      await db.execute('ALTER TABLE users_new RENAME TO users;');
-      await db.execute('ALTER TABLE events_new RENAME TO events;');
-      await db.execute('ALTER TABLE gifts_new RENAME TO gifts;');
-      await db.execute('ALTER TABLE friends_new RENAME TO friends;');
-    }
-    // Handle future migrations here
-  }
-
-  // Insert User
+  // insert a user into the local database
   Future<int> insertUser(Map<String, dynamic> user) async {
     final db = await database;
-    return await db.insert(
+
+    // Check if a user with the same ID already exists
+    final existingUser = await db.query(
       'users',
-      user,
-      conflictAlgorithm: ConflictAlgorithm.replace, // Replace on duplicate `id`
+      where: 'id = ?',
+      whereArgs: [user['id']],
     );
+
+    if (existingUser.isNotEmpty) {
+      // Update the existing record
+      return await db.update(
+        'users',
+        user,
+        where: 'id = ?',
+        whereArgs: [user['id']],
+      );
+    } else {
+      // Insert a new record
+      return await db.insert(
+        'users',
+        user,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
   }
 
   // Fetch User by ID
@@ -189,10 +157,12 @@ class DatabaseHelper {
       whereArgs: [1],
       limit: 1,
     );
+
     if (results.isNotEmpty) {
       return LocalUser.fromSQLite(results.first);
     } else {
-      throw Exception('No logged-in user found in the database.');
+      throw Exception(
+          'No logged-in user found in the database. Please log in again.');
     }
   }
 
@@ -249,17 +219,6 @@ class DatabaseHelper {
     );
   }
 
-  // Fetch Gifts for an Event
-  Future<List<Map<String, dynamic>>> getGiftsForEvent(String eventId) async {
-    final db = await database;
-    final results = await db.query(
-      'gifts',
-      where: 'event_id = ?',
-      whereArgs: [eventId],
-    );
-    return results.isNotEmpty ? results : []; // Return an empty list if no data
-  }
-
   // Fetch Pledged Gifts
   Future<List<Map<String, dynamic>>> getPledgedGifts() async {
     final db = await database;
@@ -294,27 +253,42 @@ class DatabaseHelper {
         : []; // Return an empty list if no data
   }
 
-  // Gift manipulation functions
+  //* Gift manipulation functions
 
-  Future<int> insertGift(Map<String, dynamic> gift) async {
+// Insert or replace a gift into the local database
+  Future<int> insertGift(Gift gift) async {
     final db = await database;
     return await db.insert(
       'gifts',
-      gift,
+      gift.toSQLite(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  Future<int> updateGift(String id, Map<String, dynamic> gift) async {
+// Update an existing gift
+  Future<int> updateGift(String giftId, Map<String, dynamic> giftData) async {
     final db = await database;
     return await db.update(
       'gifts',
-      gift,
+      giftData,
       where: 'id = ?',
-      whereArgs: [id],
+      whereArgs: [giftId],
     );
   }
 
+// Fetch all gifts for a specific event
+  Future<List<Gift>> getGiftsForEvent(String eventId) async {
+    final db = await database;
+    final result = await db.query(
+      'gifts',
+      where: 'event_id = ?',
+      whereArgs: [eventId],
+    );
+
+    return result.map((row) => Gift.fromMap(row)).toList();
+  }
+
+// Delete a specific gift
   Future<int> deleteGift(String giftId) async {
     final db = await database;
     return await db.delete(
@@ -360,5 +334,73 @@ class DatabaseHelper {
     } else {
       return null;
     }
+  }
+
+  //* Loading and  publishing from firestore
+  // Publish changes from local SQLite to Firebase
+  Future<void> publishEventsAndGiftsToFirebase(String userId) async {
+    final db = await database;
+
+    // Fetch events from local DB
+    final localEvents =
+        await db.query('events', where: 'user_id = ?', whereArgs: [userId]);
+
+    for (final event in localEvents) {
+      final eventId = event['id'] as String;
+
+      // Publish event to Firebase
+      final eventObj = Event.fromSQLite(event);
+      await _firebaseHelper.insertEventInFirestore(eventObj);
+
+      // Mark the event as published in the local database
+      await db.update(
+        'events',
+        {'is_published': 1}, // Set is_published to true
+        where: 'id = ?',
+        whereArgs: [eventId],
+      );
+
+      // Fetch gifts for the event
+      final localGifts =
+          await db.query('gifts', where: 'event_id = ?', whereArgs: [eventId]);
+
+      for (final gift in localGifts) {
+        final giftObj = Gift.fromMap(gift);
+        await _firebaseHelper.insertGiftInFirestore(giftObj);
+
+        // Mark the gift as published in the local database
+        await db.update(
+          'gifts',
+          {'is_published': 1}, // Set is_published to true
+          where: 'id = ?',
+          whereArgs: [giftObj.id],
+        );
+      }
+    }
+  }
+
+// Synchronize Firebase events and gifts for the current user into SQLite
+  Future<void> loadEventsAndGiftsForCurrentUser(String userId) async {
+    // Fetch events from Firebase
+    final firebaseEvents =
+        await _firebaseHelper.getEventsForUserFromFireStore(userId);
+    for (final event in firebaseEvents ?? []) {
+      await insertEvent(event.toSQLite());
+      print(event);
+
+      // Fetch gifts for the event
+      final firebaseGifts =
+          await _firebaseHelper.getGiftsForEventFromFirestore(event.id);
+      for (final gift in firebaseGifts ?? []) {
+        await insertGift(gift);
+        print(gift);
+      }
+    }
+  }
+
+  void printDatabasePath() async {
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'hedieaty.db'); // Replace with your database name
+    print('Database Path: $path');
   }
 }

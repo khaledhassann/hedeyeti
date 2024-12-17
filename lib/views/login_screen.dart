@@ -33,13 +33,36 @@ class _LoginScreenState extends State<LoginScreen> {
           _emailController.text.trim(),
           _passwordController.text.trim(),
         );
-        // final userId = userCredential!.id;
 
-        // Fetch and sync user data, events, and gifts
-        // await _syncUserData(userId);
+        if (userCredential != null) {
+          final dbHelper = DatabaseHelper();
 
-        // Navigate to the HomePage
-        Navigator.pushReplacementNamed(context, HomePage.routeName);
+          // Save user data locally in SQLite
+          final rowId = await dbHelper.insertUser(userCredential.toSQLite());
+          print(rowId);
+          // Query the database for the record with the specific row ID
+          final db = await dbHelper.database;
+          final result = await db.query(
+            'users',
+            where: 'rowid = ?',
+            whereArgs: [rowId],
+            limit: 1,
+          );
+
+          if (result.isNotEmpty) {
+            print('Record fetched: ${result.first}');
+          } else {
+            print('No record found with row ID: $rowId');
+          }
+
+          // Synchronize data
+          await dbHelper.loadEventsAndGiftsForCurrentUser(userCredential.id);
+
+          dbHelper.printDatabasePath();
+
+          // Navigate to the HomePage
+          Navigator.pushReplacementNamed(context, HomePage.routeName);
+        }
       } on FirebaseAuthException catch (e) {
         _showError(e.code);
       } catch (e) {
@@ -49,74 +72,6 @@ class _LoginScreenState extends State<LoginScreen> {
       } finally {
         setState(() {
           _isLoading = false;
-        });
-      }
-    }
-  }
-
-  /// Synchronizes user data, events, and gifts from Firestore to SQLite
-  /// ! Currently not used
-  Future<void> _syncUserData(String userId) async {
-    final firestore = FirebaseFirestore.instance;
-    final dbHelper = DatabaseHelper();
-
-    // Fetch user data from Firestore
-    final userDoc = await firestore.collection('users').doc(userId).get();
-    if (!userDoc.exists) throw Exception("User data not found in Firestore.");
-    final userData = userDoc.data()!;
-
-    // Save user data locally in SQLite
-    await dbHelper.updateUser({
-      'id': int.parse(userId), // Assuming userId is an integer
-      'name': userData['name'],
-      'email': userData['email'],
-      'preferences': userData['preferences'],
-    });
-
-    // Fetch and save user's events
-    final eventsSnapshot = await firestore
-        .collection('users')
-        .doc(userId)
-        .collection('events')
-        .get();
-
-    for (final eventDoc in eventsSnapshot.docs) {
-      final eventId = int.parse(eventDoc.id);
-      final eventData = eventDoc.data();
-
-      // Save event to SQLite
-      await dbHelper.insertEvent({
-        'id': eventId,
-        'name': eventData['name'],
-        'date': eventData['date'],
-        'location': eventData['location'],
-        'description': eventData['description'],
-        'category': eventData['category'],
-        'user_id': int.parse(userId),
-      });
-
-      // Fetch and save gifts for the event
-      final giftsSnapshot = await firestore
-          .collection('users')
-          .doc(userId)
-          .collection('events')
-          .doc(eventDoc.id)
-          .collection('gifts')
-          .get();
-
-      for (final giftDoc in giftsSnapshot.docs) {
-        final giftId = int.parse(giftDoc.id);
-        final giftData = giftDoc.data();
-
-        // Save gift to SQLite
-        await dbHelper.insertGift({
-          'id': giftId,
-          'name': giftData['name'],
-          'description': giftData['description'],
-          'price': giftData['price'],
-          'category': giftData['category'],
-          'status': giftData['status'],
-          'event_id': eventId,
         });
       }
     }

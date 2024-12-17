@@ -13,6 +13,7 @@ import 'package:hedeyeti/views/pledged_gifts_screen.dart';
 import 'package:hedeyeti/views/profile_page_screen.dart';
 
 import '../main.dart';
+import '../services/database_helper.dart';
 
 class HomePage extends StatefulWidget {
   static const routeName = '/home';
@@ -280,6 +281,21 @@ class _HomePageState extends State<HomePage> {
             ],
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final dbHelper = DatabaseHelper();
+          final loggedInUser = await dbHelper.getUser();
+          final loggedInUserId = loggedInUser.id;
+          await dbHelper.publishEventsAndGiftsToFirebase(loggedInUserId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Events and Gifts published successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+        child: const Text('Publish Changes'),
       ),
     );
   }

@@ -81,6 +81,7 @@ class GiftListBase extends StatelessWidget {
                         'category': gift.category,
                         'price': gift.price,
                         'status': gift.status,
+                        'is_published': gift.isPublished,
                       },
                       pledgerName: pledgerName,
                       onPledge: () => onPledgeGift?.call(index),

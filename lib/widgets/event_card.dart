@@ -13,47 +13,72 @@ class EventCard extends StatelessWidget {
     required this.event,
     required this.onTap,
     required this.onPopupSelected,
-    required this.isEditable, // Indicates if the card is editable
+    required this.isEditable,
   });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: ListTile(
-        onTap: onTap,
-        title: Text(event.name),
-        subtitle: Text("Date: ${event.formattedDate}"),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.info_outline, color: Colors.blue),
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  EventDetailsPage.routeName,
-                  arguments: {'eventId': event.id}, // Pass the event ID
-                );
-              },
-              tooltip: 'View Details',
+      child: Stack(
+        children: [
+          ListTile(
+            onTap: onTap,
+            title: Text(event.name),
+            subtitle: Text("Date: ${event.formattedDate}"),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline, color: Colors.blue),
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      EventDetailsPage.routeName,
+                      arguments: {'eventId': event.id},
+                    );
+                  },
+                  tooltip: 'View Details',
+                ),
+                if (isEditable)
+                  PopupMenuButton<String>(
+                    onSelected: onPopupSelected,
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(
+                        value: 'Edit',
+                        child: Text('Edit'),
+                      ),
+                      PopupMenuItem(
+                        value: 'Delete',
+                        child: Text('Delete'),
+                      ),
+                    ],
+                  ),
+              ],
             ),
-            if (isEditable)
-              PopupMenuButton<String>(
-                onSelected: onPopupSelected,
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: 'Edit',
-                    child: Text('Edit'),
+          ),
+          // Visual Cue for Unpublished Event
+          if (!event.isPublished)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                decoration: const BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.only(
+                    topRight: Radius.circular(4.0),
+                    bottomLeft: Radius.circular(4.0),
                   ),
-                  PopupMenuItem(
-                    value: 'Delete',
-                    child: Text('Delete'),
-                  ),
-                ],
+                ),
+                child: const Text(
+                  'Unpublished',
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

@@ -8,6 +8,7 @@ class Event {
   String location;
   String description;
   String userId;
+  bool isPublished;
 
   Event({
     required this.id, // Now required and non-nullable
@@ -17,6 +18,7 @@ class Event {
     required this.location,
     required this.description,
     required this.userId,
+    required this.isPublished,
   });
 
   /// Getter for formatted date
@@ -34,6 +36,7 @@ class Event {
       description:
           map['description'] as String? ?? 'No Description', // Handle null
       userId: map['userId'] as String,
+      isPublished: map['isPublished'] as bool,
     );
   }
 
@@ -47,7 +50,8 @@ class Event {
       location: map['location'] as String? ?? 'No Location', // Handle null
       description:
           map['description'] as String? ?? 'No Description', // Handle null
-      userId: map['userId'] as String,
+      userId: map['user_id'] as String,
+      isPublished: map['is_published'] == 1,
     );
   }
 
@@ -62,6 +66,7 @@ class Event {
       description:
           map['description'] as String? ?? 'No Description', // Handle null
       userId: map['userId'] as String,
+      isPublished: true,
     );
   }
 
@@ -75,6 +80,7 @@ class Event {
       'location': location,
       'description': description,
       'userId': userId,
+      'isPublished': isPublished,
       // 'gifts': gifts.map((gift) => gift.toMap()).toList(), // If gifts need to be stored
     };
   }
@@ -88,7 +94,8 @@ class Event {
       'category': category,
       'location': location,
       'description': description,
-      'userId': userId
+      'user_id': userId,
+      'is_published': isPublished ? 1 : 0,
       // Gifts are excluded; stored in their own table
     };
   }
