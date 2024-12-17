@@ -282,7 +282,7 @@ class _HomePageState extends State<HomePage> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final dbHelper = DatabaseHelper();
           final loggedInUser = await dbHelper.getUser();
@@ -295,7 +295,11 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         },
-        child: const Text('Publish Changes'),
+        label: const Text(
+          'Publish Changes',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        ),
+        icon: const Icon(Icons.cloud_done_outlined, color: Colors.black),
       ),
     );
   }

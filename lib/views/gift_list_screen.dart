@@ -24,6 +24,7 @@ class _GiftListPageState extends State<GiftListPage> {
   String? userId; // ID of the logged-in user
   String? ownerId; // Owner's ID
   String? eventId; // Event ID for the gift list
+  String? eventDueDate; // event's due date
 
   @override
   void didChangeDependencies() {
@@ -37,6 +38,9 @@ class _GiftListPageState extends State<GiftListPage> {
     if (args is Map<String, dynamic>) {
       eventId = args['eventId'] as String? ?? '';
       ownerId = args['ownerId'] as String? ?? '';
+
+      final eventJustForDate = await _firebaseHelper.getEventById(eventId!);
+      eventDueDate = eventJustForDate!.formattedDate;
 
       final dbHelper = DatabaseHelper();
       final currentUser = await _firebaseHelper.getCurrentUser();
@@ -196,6 +200,7 @@ class _GiftListPageState extends State<GiftListPage> {
     return Scaffold(
       body: GiftListBase(
         title: title,
+        dueDate: eventDueDate,
         gifts: gifts,
         canEdit: isMyList, // Allow editing only for user's gifts
         canPledge: !isMyList, // Allow pledging only for friend's gifts

@@ -163,8 +163,10 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     );
 
     await dbHelper.insertEvent(event.toSQLite());
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Event saved locally!')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Event saved locally!'),
+      backgroundColor: Colors.green,
+    ));
     Navigator.pop(context);
   }
 
@@ -223,8 +225,6 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
                 text: 'Save Event',
                 // onPressed: _saveEventToDatabase,
                 onPressed: _saveEventLocally,
-                snackbarMessage: 'Event saved successfully!',
-                snackbarColor: Colors.green,
               ),
             ],
           ),

@@ -279,8 +279,6 @@ class _CreateEditGiftPageState extends State<CreateEditGiftPage> {
               PrimaryButton(
                 text: 'Save Gift',
                 onPressed: _saveGiftToLocalDatabase,
-                snackbarMessage: 'Gift saved successfully!',
-                snackbarColor: Colors.green,
               ),
             ],
           ),

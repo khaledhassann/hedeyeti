@@ -36,6 +36,7 @@ class GiftCard extends StatelessWidget {
               children: [
                 Text('Category: ${gift['category']}'),
                 Text('Price: \$${gift['price']}'),
+                Text('Due date: ${gift['due_date']}'),
                 if (pledgerName != null) Text('Pledged by: $pledgerName'),
               ],
             ),

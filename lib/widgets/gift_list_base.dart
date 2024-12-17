@@ -10,6 +10,7 @@ class GiftListBase extends StatelessWidget {
   final bool canEdit;
   final bool canPledge;
   final bool showAddButton;
+  final String? dueDate;
   final VoidCallback? onAddGift;
   final Function(int index)? onPledgeGift;
   final Function(int index)? onGiftTap;
@@ -21,6 +22,7 @@ class GiftListBase extends StatelessWidget {
     super.key,
     required this.title,
     required this.gifts,
+    required this.dueDate,
     this.canEdit = false,
     this.canPledge = false,
     this.showAddButton = false,
@@ -82,6 +84,7 @@ class GiftListBase extends StatelessWidget {
                         'price': gift.price,
                         'status': gift.status,
                         'is_published': gift.isPublished,
+                        'due_date': dueDate,
                       },
                       pledgerName: pledgerName,
                       onPledge: () => onPledgeGift?.call(index),
