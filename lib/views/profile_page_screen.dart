@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:hedeyeti/services/database_helper.dart';
 import 'package:hedeyeti/services/image_helper.dart';
 import 'package:image_picker/image_picker.dart'; // Add this package
 import 'package:hedeyeti/models/Event.dart';
@@ -19,6 +20,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
   final ImagePicker _imagePicker = ImagePicker(); // Add ImagePicker instance
   Map<String, String> user = {}; // User info from Firebase
   List<Event> events = []; // User's events
@@ -67,6 +69,9 @@ class _ProfilePageState extends State<ProfilePage> {
     await _firebaseHelper.updateUserInFirestore(
       userId: currentUser.id,
       profilePicture: base64Image,
+    );
+    await _databaseHelper.updateUser(
+      currentUser.copyWith(profilePicture: base64Image).toSQLite(),
     );
 
     setState(() {
@@ -124,6 +129,9 @@ class _ProfilePageState extends State<ProfilePage> {
       await _firebaseHelper.updateUserInFirestore(
         userId: currentUser.id,
         notificationPush: value,
+      );
+      await _databaseHelper.updateUser(
+        currentUser.copyWith(notificationPush: value).toSQLite(),
       );
     }
   }
@@ -268,6 +276,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 await _firebaseHelper.updateUserInFirestore(
                   userId: currentUser.id,
                   name: updatedName,
+                );
+                await _databaseHelper.updateUser(
+                  currentUser.copyWith(name: updatedName).toSQLite(),
                 );
                 setState(() {
                   user['name'] = updatedName;

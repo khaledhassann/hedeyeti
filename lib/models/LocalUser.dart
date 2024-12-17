@@ -87,4 +87,22 @@ class LocalUser {
       notificationPush: false,
     );
   }
+
+  LocalUser copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? profilePicture,
+    bool? isMe,
+    bool? notificationPush,
+  }) {
+    return LocalUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      profilePicture: profilePicture ?? this.profilePicture,
+      isMe: isMe ?? this.isMe,
+      notificationPush: notificationPush ?? this.notificationPush,
+    );
+  }
 }

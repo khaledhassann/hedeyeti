@@ -18,7 +18,7 @@ class ImageHelper {
       // Compress the image
       final compressedImage = await FlutterImageCompress.compressWithFile(
         pickedFile.path,
-        quality: 85, // Adjust quality for compression
+        quality: 75, // Adjust quality for compression
       );
       if (compressedImage != null) {
         final base64Image = base64Encode(compressedImage);
@@ -39,7 +39,7 @@ class ImageHelper {
       // Compress the image
       final compressedImage = await FlutterImageCompress.compressWithFile(
         pickedFile.path,
-        quality: 85, // Adjust quality for compression
+        quality: 75, // Adjust quality for compression
       );
       if (compressedImage != null) {
         final base64Image = base64Encode(compressedImage);
