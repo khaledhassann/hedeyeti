@@ -59,22 +59,20 @@ class GiftCard extends StatelessWidget {
           // Visual Cue for Unpublished Gift
           if (gift['is_published'] == false) // Assuming this property exists
             Positioned(
-              top: 0,
-              right: 0,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                decoration: const BoxDecoration(
-                  color: Colors.orange,
-                  borderRadius: BorderRadius.only(
-                    topRight: Radius.circular(4.0),
-                    bottomLeft: Radius.circular(4.0),
-                  ),
-                ),
-                child: const Text(
-                  'Unpublished',
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                ),
+              top: 5,
+              right: 5,
+              child: const Icon(
+                Icons.cloud_off_outlined,
+                color: Colors.orange,
+              ),
+            ),
+          if (gift['is_published'] == true) // Assuming this property exists
+            Positioned(
+              top: 5,
+              right: 5,
+              child: const Icon(
+                Icons.cloud_done_outlined,
+                color: Colors.green,
               ),
             ),
         ],
