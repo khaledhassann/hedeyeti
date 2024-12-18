@@ -12,10 +12,13 @@ import '../models/LocalUser.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
-  factory DatabaseHelper() => _instance;
+  factory DatabaseHelper({FirebaseHelper? firebaseHelper}) {
+    _instance._firebaseHelper = firebaseHelper ?? FirebaseHelper();
+    return _instance;
+  }
 
   static Database? _database;
-  final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  late FirebaseHelper _firebaseHelper;
 
   DatabaseHelper._internal();
 

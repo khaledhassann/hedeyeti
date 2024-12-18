@@ -112,4 +112,27 @@ class Event {
       // Exclude ID as Firestore generates its own
     };
   }
+
+  /// `copyWith` method to create a new instance with modified fields
+  Event copyWith({
+    String? id,
+    String? name,
+    DateTime? date,
+    String? category,
+    String? location,
+    String? description,
+    String? userId,
+    bool? isPublished,
+  }) {
+    return Event(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      date: date ?? this.date,
+      category: category ?? this.category,
+      location: location ?? this.location,
+      description: description ?? this.description,
+      userId: userId ?? this.userId,
+      isPublished: isPublished ?? this.isPublished,
+    );
+  }
 }
