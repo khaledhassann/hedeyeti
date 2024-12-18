@@ -240,6 +240,16 @@ class DatabaseHelper {
     );
   }
 
+  Future<int> removeFriend(String userId, String friendId) async {
+    final db = await database;
+
+    return await db.delete(
+      'friends',
+      where: 'user_id = ? AND friend_id = ?',
+      whereArgs: [userId, friendId],
+    );
+  }
+
   // Fetch Friends
   Future<List<String>> getFriends(String userId) async {
     final db = await database;

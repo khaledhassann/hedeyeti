@@ -45,6 +45,7 @@ dependencies:
   permission_handler: ^11.0.1
   flutter_local_notifications: ^17.2.4
   flutter_image_compress: ^2.3.0
+  mockito: ^5.4.2
 
 dev_dependencies:
   flutter_test:

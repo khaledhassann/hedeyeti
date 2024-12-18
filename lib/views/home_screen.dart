@@ -26,6 +26,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final FirebaseHelper _firebaseHelper = FirebaseHelper();
+  final DatabaseHelper _databaseHelper = DatabaseHelper();
   late Future<LocalUser> _userFuture;
   final ValueNotifier<Future<List<LocalUser>>?> _friendsFutureNotifier =
       ValueNotifier<Future<List<LocalUser>>?>(null);
@@ -111,6 +112,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _addFriend(String userId, String friendId) async {
     try {
       await _firebaseHelper.addFriendInFirestore(userId, friendId);
+      await _databaseHelper.addFriend(userId, friendId);
 
       // Refresh the friends list
       _friendsFutureNotifier.value = _fetchFriends();
@@ -137,6 +139,7 @@ class _HomePageState extends State<HomePage> {
       if (currentUser == null) return;
 
       await _firebaseHelper.removeFriendInFirestore(currentUser.id, friendId);
+      await _databaseHelper.removeFriend(currentUser.id, friendId);
 
       // Refresh the friends list
       _friendsFutureNotifier.value = _fetchFriends();
