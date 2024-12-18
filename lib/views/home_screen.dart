@@ -554,7 +554,7 @@ class _HomePageState extends State<HomePage> {
         style: ElevatedButton.styleFrom(
           minimumSize: const Size(double.infinity, 50),
         ),
-        child: const Text('Create Your Own Event/List'),
+        child: const Text('Create Your Own Event'),
       ),
     );
   }

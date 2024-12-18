@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hedeyeti/services/firebase_helper.dart';
 import '../models/Event.dart';
-import '../models/LocalUser.dart';
 import '../services/database_helper.dart';
-import '../widgets/event_category_dropdown.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/reusable_text_field.dart';
 
 class CreateEditEventPage extends StatefulWidget {
   static const routeName = '/create-edit-event';
@@ -18,24 +14,21 @@ class CreateEditEventPage extends StatefulWidget {
 
 class _CreateEditEventPageState extends State<CreateEditEventPage> {
   final _formKey = GlobalKey<FormState>();
-  final FirebaseHelper _firebaseHelper = FirebaseHelper();
-
   late TextEditingController _nameController;
   late TextEditingController _dateController;
   late TextEditingController _locationController;
   late TextEditingController _descriptionController;
 
   String _category = 'Birthday';
-  String? _eventId; // To track if editing an existing event
+  String? _eventId;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     final args = ModalRoute.of(context)?.settings.arguments;
 
     if (args is Event) {
-      _eventId = args.id; // Get the ID if editing an existing event
+      _eventId = args.id;
       _nameController = TextEditingController(text: args.name);
       _dateController = TextEditingController(text: args.formattedDate);
       _locationController = TextEditingController(text: args.location);
@@ -73,83 +66,9 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
     }
   }
 
-  Future<void> _saveEventToDatabase() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        final currentUser = await _firebaseHelper.getCurrentUser();
-        if (currentUser == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('User not logged in.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-
-        final eventDetails = {
-          'name': _nameController.text,
-          'date': _dateController.text,
-          'location': _locationController.text,
-          'description': _descriptionController.text,
-          'category': _category,
-          'userId': currentUser.id, // Add the current user's ID
-        };
-
-        if (_eventId == null) {
-          // Create new event
-          final newEvent = Event(
-            id: _firebaseHelper.events.doc().id,
-            name: eventDetails['name']!,
-            date: DateTime.parse(eventDetails['date']!),
-            location: eventDetails['location']!,
-            description: eventDetails['description']!,
-            category: eventDetails['category']!,
-            userId: eventDetails['userId']!,
-            isPublished: true,
-          );
-          await _firebaseHelper.insertEventInFirestore(newEvent);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Event created successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else {
-          // Update existing event
-          await _firebaseHelper.updateEventInFirestore(
-            eventId: _eventId!,
-            name: eventDetails['name'],
-            date: DateTime.parse(eventDetails['date']!),
-            category: eventDetails['category'],
-            location: eventDetails['location'],
-            description: eventDetails['description'],
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Event updated successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-
-        Navigator.pop(context); // Return to the previous screen
-      } catch (e) {
-        print('Error saving event: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to save event.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   Future<void> _saveEventLocally() async {
     final dbHelper = DatabaseHelper();
-    LocalUser loggedInUser = await dbHelper.getUser();
-    final loggedInUserId = loggedInUser.id;
+    final currentUser = await dbHelper.getUser();
 
     final event = Event(
       id: _eventId ?? DateTime.now().toIso8601String(),
@@ -158,15 +77,17 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
       category: _category,
       location: _locationController.text,
       description: _descriptionController.text,
-      userId: loggedInUserId,
+      userId: currentUser.id,
       isPublished: false,
     );
 
     await dbHelper.insertEvent(event.toSQLite());
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Event saved locally!'),
-      backgroundColor: Colors.green,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Event saved locally!'),
+        backgroundColor: Colors.green,
+      ),
+    );
     Navigator.pop(context);
   }
 
@@ -174,9 +95,7 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _eventId == null ? 'Create Event' : 'Edit Event',
-        ),
+        title: Text(_eventId == null ? 'Create Event' : 'Edit Event'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -184,47 +103,103 @@ class _CreateEditEventPageState extends State<CreateEditEventPage> {
           key: _formKey,
           child: ListView(
             children: [
-              ReusableTextField(
-                controller: _nameController,
-                labelText: 'Event Name',
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Please enter an event name'
-                    : null,
+              const Text(
+                'Event Details',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              // Event Date with Date Picker
-              ReusableTextField(
-                controller: _dateController,
-                labelText: 'Event Date',
-                hintText: 'YYYY-MM-DD',
-                readOnly: true,
-                onTap: () => _selectDate(context),
+              const Divider(),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Event Name',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) => value == null || value.isEmpty
+                            ? 'Please enter an event name'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _dateController,
+                        decoration: const InputDecoration(
+                          labelText: 'Event Date',
+                          hintText: 'YYYY-MM-DD',
+                          border: OutlineInputBorder(),
+                        ),
+                        readOnly: true,
+                        onTap: () => _selectDate(context),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _locationController,
+                        decoration: const InputDecoration(
+                          labelText: 'Location',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (value) => value == null || value.isEmpty
+                            ? 'Please enter a location'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                          border: OutlineInputBorder(),
+                        ),
+                        maxLines: 3,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a description';
+                          } else {
+                            return null;
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        value: _category,
+                        onChanged: (value) =>
+                            setState(() => _category = value!),
+                        decoration: const InputDecoration(
+                          labelText: 'Category',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'Birthday',
+                            child: Text('Birthday'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Wedding',
+                            child: Text('Wedding'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Graduation',
+                            child: Text('Graduation'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'Holiday',
+                            child: Text('Holiday'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              ReusableTextField(
-                controller: _locationController,
-                labelText: 'Location',
-                validator: (value) => value == null || value.isEmpty
-                    ? 'Please enter a location'
-                    : null,
-              ),
-              ReusableTextField(
-                  controller: _descriptionController,
-                  labelText: 'Description',
-                  maxLines: 3,
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Please enter a short description'
-                      : null),
-              EventCategoryDropdown(
-                value: _category,
-                onChanged: (value) {
-                  setState(() {
-                    _category = value!;
-                  });
-                },
-              ),
-              PrimaryButton(
-                text: 'Save Event',
-                // onPressed: _saveEventToDatabase,
+              const SizedBox(height: 24),
+              ElevatedButton(
                 onPressed: _saveEventLocally,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                ),
+                child: const Text('Save Event'),
               ),
             ],
           ),
