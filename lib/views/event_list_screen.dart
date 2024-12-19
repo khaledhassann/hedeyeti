@@ -150,6 +150,7 @@ class _EventListPageState extends State<EventListPage> {
                 final isMyEvent = event.userId == _currentUserId;
 
                 return EventCard(
+                  key: const ValueKey('Event card'),
                   event: event,
                   onTap: () {
                     // Navigate to gift list regardless of ownership

@@ -129,6 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     TextFormField(
+                      key: const ValueKey('Email field'),
                       controller: _emailController,
                       decoration: const InputDecoration(labelText: 'Email'),
                       keyboardType: TextInputType.emailAddress,
@@ -146,6 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      key: const ValueKey('Password field'),
                       controller: _passwordController,
                       decoration: const InputDecoration(labelText: 'Password'),
                       obscureText: true,
@@ -165,6 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
               _isLoading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(
+                      key: const ValueKey('Login button'),
                       onPressed: _login,
                       child: const Text('Login'),
                     ),

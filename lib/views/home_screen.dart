@@ -503,6 +503,7 @@ class _HomePageState extends State<HomePage> {
               } else {
                 final events = snapshot.data ?? [];
                 return ListTile(
+                  key: const ValueKey('Friend tile'),
                   onTap: () {
                     Navigator.pushNamed(context, EventListPage.routeName,
                         arguments: {
