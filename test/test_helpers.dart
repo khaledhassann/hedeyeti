@@ -116,6 +116,12 @@ Future<void> stubFirestoreDocGet({
     print('MockDocument.get() called for friends/$docId');
     return mockSnapshot;
   });
+  // Support the `[]` operator if data is provided
+  if (data != null) {
+    data.forEach((key, value) {
+      when(mockSnapshot[key]).thenReturn(value);
+    });
+  }
 }
 
 /// Stubs Firestore document writes (set/update) to simply succeed.
@@ -155,25 +161,39 @@ void stubFirestoreDocDelete({
 
 /// Stubs a Firestore query to return multiple documents.
 /// You can enhance this function to handle multiple where clauses if needed.
+/// Stubs a Firestore query to return multiple documents.
 Future<void> stubFirestoreQuery({
   required FirebaseFirestore mockFirestore,
-  required String collectionPath,
-  Map<String, dynamic>? whereEqualTo,
-  List<Map<String, dynamic>>? docsData,
+  required MockCollectionReference<Map<String, dynamic>> mockCollection,
+  required Map<String, dynamic>? whereEqualTo,
+  required List<Map<String, dynamic>> docsData,
+  required MockQuerySnapshot<Map<String, dynamic>> mockQuerySnapshot,
 }) async {
-  docsData ??= [];
-  final mockQuerySnapshot = createMockQuerySnapshot(docsData);
+  print('Stubbing Firestore query...');
 
-  // This is a simple example handling single or multiple equalities.
-  final collectionRef = mockFirestore.collection(collectionPath);
-  Query<Map<String, dynamic>> queryRef = collectionRef;
-  if (whereEqualTo != null && whereEqualTo.isNotEmpty) {
-    whereEqualTo.forEach((field, value) {
-      queryRef = queryRef.where(field, isEqualTo: value);
+  // Stub the where clause
+  if (whereEqualTo != null) {
+    whereEqualTo.forEach((key, value) {
+      when(mockCollection.where(key, isEqualTo: value))
+          .thenReturn(mockCollection);
     });
   }
 
-  when(queryRef.get()).thenAnswer((_) async => mockQuerySnapshot);
+  // Stub the get() method to return the mockQuerySnapshot
+  when(mockCollection.get()).thenAnswer((_) async {
+    print('MockCollection.get() called for query');
+    return mockQuerySnapshot;
+  });
+
+  // Stub the docs in the query snapshot
+  final mockDocs = docsData.map((docData) {
+    final mockDoc = MockQueryDocumentSnapshot<Map<String, dynamic>>();
+    when(mockDoc.id).thenReturn(docData['id'] as String);
+    when(mockDoc.data()).thenReturn(docData..remove('id'));
+    return mockDoc;
+  }).toList();
+
+  when(mockQuerySnapshot.docs).thenReturn(mockDocs);
 }
 
 /// Creates a sample Event object for testing.

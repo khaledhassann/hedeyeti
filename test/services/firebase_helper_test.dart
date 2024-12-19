@@ -192,22 +192,27 @@ void main() {
       print('Stubbing Firestore collection...');
       when(mockFirestore.collection('friends')).thenReturn(mockCollection);
 
-      print('Stubbing Firestore document get...');
-      when(mockCollection.doc(userId)).thenReturn(mockDocument);
-      when(mockDocument.get()).thenAnswer((_) async {
-        print('MockDocument.get() called for friends/$userId');
-        return createMockDocSnapshot(
-          data: {
-            'friendIds': ['friend2'], // Existing friends before adding
-          },
-          exists: true,
-        );
-      });
+      // Use the helper to stub Firestore document get
+      await stubFirestoreDocGet(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: userId,
+        mockDocument: mockDocument,
+        data: {
+          'friendIds': ['friend2'], // Existing friends before adding
+        },
+        exists: true, // Ensure the document exists
+      );
 
-      print('Stubbing Firestore document update...');
-      when(mockDocument.update(updatedFriendData)).thenAnswer((_) async {
-        print('MockDocument.update() called with: $updatedFriendData');
-      });
+      // Use the helper to stub Firestore document update
+      stubFirestoreDocWrite(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: userId,
+        mockDocument: mockDocument,
+        setMap: {}, // Not needed for this test
+        updateMap: updatedFriendData, // Updated friend list after adding
+      );
 
       print('Calling addFriendInFirestore...');
       await firebaseHelper.addFriendInFirestore(userId, friendId);
@@ -232,61 +237,64 @@ void main() {
       print('Stubbing Firestore collection...');
       when(mockFirestore.collection('friends')).thenReturn(mockCollection);
 
-      print('Stubbing Firestore document get...');
-      when(mockCollection.doc(userId)).thenReturn(mockDocument);
-      when(mockDocument.get()).thenAnswer((_) async {
-        print('MockDocument.get() called for friends/$userId');
-        return createMockDocSnapshot(
-          data: {
-            'friendIds': [
-              'friend2',
-              'friend1'
-            ], // Existing friends before removing
-          },
-          exists: true,
-        );
-      });
+      // Use the helper to stub Firestore document get
+      await stubFirestoreDocGet(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: userId,
+        mockDocument: mockDocument,
+        data: {
+          'friendIds': [
+            'friend2',
+            'friend1'
+          ], // Existing friends before removing
+        },
+        exists: true, // Ensure the document exists
+      );
 
-      print('Stubbing Firestore document update...');
-      when(mockDocument.update(updatedFriendData)).thenAnswer((_) async {
-        print('MockDocument.update() called with: $updatedFriendData');
-      });
+      // Use the helper to stub Firestore document update
+      stubFirestoreDocWrite(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: userId,
+        mockDocument: mockDocument,
+        setMap: {}, // Not needed for this test
+        updateMap: updatedFriendData, // Updated friend list after removing
+      );
 
       // Call the method under test
       await firebaseHelper.removeFriendInFirestore(userId, friendId);
 
       // Verify the update method was called
       verify(mockDocument.update(updatedFriendData)).called(1);
+
+      print('Test passed!');
     });
 
     test('Search User by Email in Firestore', () async {
       // Create shared mock references
       final mockCollection = MockCollectionReference<Map<String, dynamic>>();
       final mockQuerySnapshot = MockQuerySnapshot<Map<String, dynamic>>();
-      final mockUserDoc = MockQueryDocumentSnapshot<Map<String, dynamic>>();
 
       print('Stubbing Firestore collection...');
       when(mockFirestore.collection('users')).thenReturn(mockCollection);
 
-      print('Stubbing Firestore query...');
-      when(mockCollection.where('email', isEqualTo: 'test@example.com'))
-          .thenReturn(mockCollection);
-      when(mockCollection.get()).thenAnswer((_) async {
-        print('MockCollection.get() called for users');
-        return mockQuerySnapshot;
-      });
-
-      print('Stubbing query snapshot...');
-      when(mockQuerySnapshot.docs).thenReturn([mockUserDoc]);
-
-      print('Stubbing query document...');
-      when(mockUserDoc.id).thenReturn('user1'); // Stub the document ID
-      when(mockUserDoc.data()).thenReturn({
-        'name': 'Test User',
-        'email': 'test@example.com',
-        'profilePicture': 'path/to/image.png',
-        'notificationPush': true,
-      });
+      // Use the helper to stub Firestore query
+      await stubFirestoreQuery(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        whereEqualTo: {'email': 'test@example.com'},
+        docsData: [
+          {
+            'id': 'user1', // Stub the document ID
+            'name': 'Test User',
+            'email': 'test@example.com',
+            'profilePicture': 'path/to/image.png',
+            'notificationPush': true,
+          }
+        ],
+        mockQuerySnapshot: mockQuerySnapshot,
+      );
 
       // Call the method under test
       final result =
@@ -302,26 +310,21 @@ void main() {
       // Create shared mock references
       final mockCollection = MockCollectionReference<Map<String, dynamic>>();
       final mockDocument = MockDocumentReference<Map<String, dynamic>>();
-      final mockSnapshot = MockDocumentSnapshot<Map<String, dynamic>>();
 
       print('Stubbing Firestore collection...');
       when(mockFirestore.collection('friends')).thenReturn(mockCollection);
 
-      print('Stubbing Firestore document get...');
-      when(mockCollection.doc('user1')).thenReturn(mockDocument);
-      when(mockDocument.get()).thenAnswer((_) async {
-        print('MockDocument.get() called for friends/user1');
-        return mockSnapshot;
-      });
-
-      print('Stubbing document snapshot...');
-      when(mockSnapshot.exists).thenReturn(true); // Ensure document exists
-      when(mockSnapshot.data()).thenReturn({
-        'friendIds': ['friend1', 'friend2'], // Mocked friend IDs
-      });
-
-      // Mock the `[]` operator explicitly for accessing friendIds
-      when(mockSnapshot['friendIds']).thenReturn(['friend1', 'friend2']);
+      // Use the helper to stub Firestore document get
+      await stubFirestoreDocGet(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: 'user1',
+        mockDocument: mockDocument,
+        data: {
+          'friendIds': ['friend1', 'friend2'], // Mocked friend IDs
+        },
+        exists: true, // Ensure the document exists
+      );
 
       // Call the method under test
       final result =
