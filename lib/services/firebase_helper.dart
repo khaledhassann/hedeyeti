@@ -14,17 +14,19 @@ class FirebaseHelper {
   // Step 1: Create a private static instance of the class
   static final FirebaseHelper _instance = FirebaseHelper._internal();
 
-  // Step 2: Private constructor to prevent external instantiation
-  FirebaseHelper._internal();
-
-  // Step 3: Factory constructor to return the single instance
-  factory FirebaseHelper() {
+  // Step 2: Factory constructor to return the single instance
+  factory FirebaseHelper({FirebaseFirestore? firestore, FirebaseAuth? auth}) {
+    _instance._firestore = firestore ?? FirebaseFirestore.instance;
+    _instance._auth = auth ?? FirebaseAuth.instance;
     return _instance;
   }
 
   // Firestore instance
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
+  late FirebaseFirestore _firestore;
+  late auth.FirebaseAuth _auth;
+
+  // Step 3: Private constructor to prevent external instantiation
+  FirebaseHelper._internal();
 
   // Step 4: Define Firestore collection references
   CollectionReference get users => _firestore.collection('users');
