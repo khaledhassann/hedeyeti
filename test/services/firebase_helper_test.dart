@@ -343,52 +343,88 @@ void main() {
         'location': 'Updated Location',
       };
 
-      when(mockFirestore.collection('events').doc(eventId).update(updatedData))
-          .thenAnswer((_) async {});
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockDocument = MockDocumentReference<Map<String, dynamic>>();
 
+      // Stub Firestore collection and document
+      when(mockFirestore.collection('events')).thenReturn(mockCollection);
+      when(mockCollection.doc(eventId)).thenReturn(mockDocument);
+
+      // Use the helper to stub Firestore document update
+      stubFirestoreDocWrite(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: eventId,
+        mockDocument: mockDocument,
+        setMap: {}, // Not needed
+        updateMap: updatedData,
+      );
+
+      // Call the method under test
       await firebaseHelper.updateEventInFirestore(
         eventId: eventId,
         name: updatedData['name'] as String,
         location: updatedData['location'] as String,
       );
 
-      verify(mockFirestore
-              .collection('events')
-              .doc(eventId)
-              .update(updatedData))
-          .called(1);
+      // Verify the update method was called
+      verify(mockDocument.update(updatedData)).called(1);
     });
 
     test('Get Event by ID', () async {
-      final mockEventDoc = MockDocumentSnapshot<Map<String, dynamic>>();
-      final mockEventData = {
-        'name': 'Test Event',
-        'date': '2024-01-01T00:00:00.000',
-        'category': 'Birthday',
-        'location': 'Home',
-        'description': 'A test event',
-        'userId': 'user1',
-      };
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockDocument = MockDocumentReference<Map<String, dynamic>>();
 
-      when(mockFirestore.collection('events').doc('event1').get())
-          .thenAnswer((_) async => mockEventDoc);
-      when(mockEventDoc.exists).thenReturn(true);
-      when(mockEventDoc.data()).thenReturn(mockEventData);
+      // Stub Firestore collection and document
+      when(mockFirestore.collection('events')).thenReturn(mockCollection);
+      when(mockCollection.doc('event1')).thenReturn(mockDocument);
 
+      // Use the helper to stub Firestore document get
+      await stubFirestoreDocGet(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: 'event1',
+        mockDocument: mockDocument,
+        data: {
+          'name': 'Test Event',
+          'date': '2024-01-01T00:00:00.000',
+          'category': 'Birthday',
+          'location': 'Home',
+          'description': 'A test event',
+          'userId': 'user1',
+        },
+        exists: true,
+      );
+
+      // Call the method under test
       final result = await firebaseHelper.getEventById('event1');
 
+      // Assertions
       expect(result, isNotNull);
       expect(result?.name, equals('Test Event'));
     });
 
     test('Delete Event from Firestore', () async {
-      when(mockFirestore.collection('events').doc('event1').delete())
-          .thenAnswer((_) async {});
+      const eventId = 'event1';
 
-      await firebaseHelper.deleteEventInFirestore('event1');
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockDocument = MockDocumentReference<Map<String, dynamic>>();
 
-      verify(mockFirestore.collection('events').doc('event1').delete())
-          .called(1);
+      // Stub Firestore collection and document
+      when(mockFirestore.collection('events')).thenReturn(mockCollection);
+      when(mockCollection.doc(eventId)).thenReturn(mockDocument);
+
+      // Stub Firestore document delete
+      when(mockDocument.delete()).thenAnswer((_) async {});
+
+      // Call the method under test
+      await firebaseHelper.deleteEventInFirestore(eventId);
+
+      // Verify the delete method was called
+      verify(mockDocument.delete()).called(1);
     });
 
     test('Insert Event into Firestore', () async {
@@ -403,45 +439,63 @@ void main() {
         isPublished: true,
       );
 
-      when(mockFirestore
-              .collection('events')
-              .doc(testEvent.id)
-              .set(testEvent.toFirestore()))
-          .thenAnswer((_) async {});
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockDocument = MockDocumentReference<Map<String, dynamic>>();
 
+      // Stub Firestore collection and document
+      when(mockFirestore.collection('events')).thenReturn(mockCollection);
+      when(mockCollection.doc(testEvent.id)).thenReturn(mockDocument);
+
+      // Use the helper to stub Firestore document set
+      stubFirestoreDocWrite(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: testEvent.id,
+        mockDocument: mockDocument,
+        setMap: testEvent.toFirestore(),
+        updateMap: {}, // Not needed
+      );
+
+      // Call the method under test
       await firebaseHelper.insertEventInFirestore(testEvent);
 
-      verify(mockFirestore
-              .collection('events')
-              .doc(testEvent.id)
-              .set(testEvent.toFirestore()))
-          .called(1);
+      // Verify the set method was called
+      verify(mockDocument.set(testEvent.toFirestore())).called(1);
     });
 
     test('Get Events for User from Firestore', () async {
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
       final mockQuerySnapshot = MockQuerySnapshot<Map<String, dynamic>>();
-      final mockEventDoc = MockQueryDocumentSnapshot<Map<String, dynamic>>();
-      final mockEventData = {
-        'name': 'Test Event',
-        'date': '2024-01-01T00:00:00.000',
-        'category': 'Birthday',
-        'location': 'Home',
-        'description': 'A test event',
-        'userId': 'user1',
-      };
 
-      when(mockFirestore
-              .collection('events')
-              .where('userId', isEqualTo: 'user1')
-              .get())
-          .thenAnswer((_) async => mockQuerySnapshot);
+      // Stub Firestore collection
+      when(mockFirestore.collection('events')).thenReturn(mockCollection);
 
-      when(mockQuerySnapshot.docs).thenReturn([mockEventDoc]);
-      when(mockEventDoc.data()).thenReturn(mockEventData);
+      // Use the helper to stub Firestore query
+      await stubFirestoreQuery(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        whereEqualTo: {'userId': 'user1'},
+        docsData: [
+          {
+            'id': 'event1',
+            'name': 'Test Event',
+            'date': '2024-01-01T00:00:00.000',
+            'category': 'Birthday',
+            'location': 'Home',
+            'description': 'A test event',
+            'userId': 'user1',
+          }
+        ],
+        mockQuerySnapshot: mockQuerySnapshot,
+      );
 
+      // Call the method under test
       final result =
           await firebaseHelper.getEventsForUserFromFireStore('user1');
 
+      // Assertions
       expect(result, isNotNull);
       expect(result?.length, equals(1));
       expect(result?.first.name, equals('Test Event'));
@@ -450,91 +504,132 @@ void main() {
 
   group('Gift-related Tests', () {
     test('Get Gifts for Event from Firestore', () async {
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
       final mockQuerySnapshot = MockQuerySnapshot<Map<String, dynamic>>();
-      final mockGiftDoc = MockQueryDocumentSnapshot<Map<String, dynamic>>();
-      final mockGiftData = {
-        'name': 'Test Gift',
-        'description': 'A gift for the event',
-        'category': 'Electronics',
-        'price': 50.0,
-        'status': 'Available',
-        'event_id': 'event1',
-      };
 
-      when(mockFirestore
-              .collection('gifts')
-              .where('event_id', isEqualTo: 'event1')
-              .get())
-          .thenAnswer((_) async => mockQuerySnapshot);
-      when(mockQuerySnapshot.docs).thenReturn([mockGiftDoc]);
-      when(mockGiftDoc.data()).thenReturn(mockGiftData);
+      // Stub Firestore collection
+      when(mockFirestore.collection('gifts')).thenReturn(mockCollection);
 
+      // Use the helper to stub Firestore query
+      await stubFirestoreQuery(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        whereEqualTo: {'event_id': 'event1'},
+        docsData: [
+          {
+            'id': 'gift1',
+            'name': 'Test Gift',
+            'description': 'A gift for the event',
+            'category': 'Electronics',
+            'price': 50.0,
+            'status': 'Available',
+            'event_id': 'event1',
+          }
+        ],
+        mockQuerySnapshot: mockQuerySnapshot,
+      );
+
+      // Call the method under test
       final result =
           await firebaseHelper.getGiftsForEventFromFirestore('event1');
 
+      // Assertions
       expect(result, isNotNull);
       expect(result?.length, equals(1));
       expect(result?.first.name, equals('Test Gift'));
     });
 
     test('Delete Gift from Firestore', () async {
-      when(mockFirestore.collection('gifts').doc('gift1').delete())
-          .thenAnswer((_) async {});
+      const giftId = 'gift1';
 
-      await firebaseHelper.deleteGiftInFirestore('gift1');
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockDocument = MockDocumentReference<Map<String, dynamic>>();
 
-      verify(mockFirestore.collection('gifts').doc('gift1').delete()).called(1);
+      // Stub Firestore collection and document
+      when(mockFirestore.collection('gifts')).thenReturn(mockCollection);
+      when(mockCollection.doc(giftId)).thenReturn(mockDocument);
+
+      // Stub Firestore document delete
+      when(mockDocument.delete()).thenAnswer((_) async {});
+
+      // Call the method under test
+      await firebaseHelper.deleteGiftInFirestore(giftId);
+
+      // Verify the delete method was called
+      verify(mockDocument.delete()).called(1);
     });
 
     test('Get Pledged Gifts from User from Firestore', () async {
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
       final mockQuerySnapshot = MockQuerySnapshot<Map<String, dynamic>>();
-      final mockGiftDoc = MockQueryDocumentSnapshot<Map<String, dynamic>>();
-      final mockGiftData = {
-        'name': 'Test Gift',
-        'description': 'A pledged gift',
-        'category': 'Electronics',
-        'price': 50.0,
-        'status': 'Pledged',
-        'event_id': 'event1',
-        'pledger_id': 'user1',
-      };
 
-      when(mockFirestore
-              .collection('gifts')
-              .where('pledger_id', isEqualTo: 'user1')
-              .get())
-          .thenAnswer((_) async => mockQuerySnapshot);
-      when(mockQuerySnapshot.docs).thenReturn([mockGiftDoc]);
-      when(mockGiftDoc.data()).thenReturn(mockGiftData);
+      // Stub Firestore collection
+      when(mockFirestore.collection('gifts')).thenReturn(mockCollection);
 
+      // Use the helper to stub Firestore query
+      await stubFirestoreQuery(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        whereEqualTo: {'pledger_id': 'user1'},
+        docsData: [
+          {
+            'id': 'gift 1',
+            'name': 'Test Gift',
+            'description': 'A pledged gift',
+            'category': 'Electronics',
+            'price': 50.0,
+            'status': 'Pledged',
+            'event_id': 'event1',
+            'pledger_id': 'user1',
+          }
+        ],
+        mockQuerySnapshot: mockQuerySnapshot,
+      );
+
+      // Call the method under test
       final result =
           await firebaseHelper.getPledgedGiftsFromUserFromFirestore('user1');
 
+      // Assertions
       expect(result, isNotNull);
       expect(result?.length, equals(1));
       expect(result?.first.name, equals('Test Gift'));
     });
 
     test('Get Gift by ID', () async {
-      final mockGiftDoc = MockDocumentSnapshot<Map<String, dynamic>>();
-      final mockGiftData = {
-        'name': 'Test Gift',
-        'description': 'Test Description',
-        'category': 'Electronics',
-        'price': 50.0,
-        'status': 'Available',
-        'event_id': 'event1',
-        'pledger_id': null,
-      };
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockDocument = MockDocumentReference<Map<String, dynamic>>();
 
-      when(mockFirestore.collection('gifts').doc('gift1').get())
-          .thenAnswer((_) async => mockGiftDoc);
+      // Stub Firestore collection and document
+      when(mockFirestore.collection('gifts')).thenReturn(mockCollection);
+      when(mockCollection.doc('gift1')).thenReturn(mockDocument);
 
-      when(mockGiftDoc.exists).thenReturn(true);
-      when(mockGiftDoc.data()).thenReturn(mockGiftData);
+      // Use the helper to stub Firestore document get
+      await stubFirestoreDocGet(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: 'gift1',
+        mockDocument: mockDocument,
+        data: {
+          'name': 'Test Gift',
+          'description': 'Test Description',
+          'category': 'Electronics',
+          'price': 50.0,
+          'status': 'Available',
+          'event_id': 'event1',
+          'pledger_id': null,
+        },
+        exists: true,
+      );
 
+      // Call the method under test
       final result = await firebaseHelper.getGiftById('gift1');
 
+      // Assertions
       expect(result, isNotNull);
       expect(result?.name, equals('Test Gift'));
     });
@@ -552,19 +647,29 @@ void main() {
         isPublished: true,
       );
 
-      when(mockFirestore
-              .collection('gifts')
-              .doc(testGift.id)
-              .set(testGift.toFirestore()))
-          .thenAnswer((_) async {});
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockDocument = MockDocumentReference<Map<String, dynamic>>();
 
+      // Stub Firestore collection and document
+      when(mockFirestore.collection('gifts')).thenReturn(mockCollection);
+      when(mockCollection.doc(testGift.id)).thenReturn(mockDocument);
+
+      // Use the helper to stub Firestore document set
+      stubFirestoreDocWrite(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: testGift.id,
+        mockDocument: mockDocument,
+        setMap: testGift.toFirestore(),
+        updateMap: {}, // Not needed here
+      );
+
+      // Call the method under test
       await firebaseHelper.insertGiftInFirestore(testGift);
 
-      verify(mockFirestore
-              .collection('gifts')
-              .doc(testGift.id)
-              .set(testGift.toFirestore()))
-          .called(1);
+      // Verify the set method was called
+      verify(mockDocument.set(testGift.toFirestore())).called(1);
     });
 
     test('Update Gift in Firestore', () async {
@@ -573,38 +678,65 @@ void main() {
         'name': 'Updated Gift',
         'price': 100.0,
         'status': 'Pledged',
+        'pledger_id': 'user1', // can be null also and will still work
       };
 
-      when(mockFirestore.collection('gifts').doc(giftId).update(updatedData))
-          .thenAnswer((_) async {});
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockDocument = MockDocumentReference<Map<String, dynamic>>();
 
+      // Stub Firestore collection and document
+      when(mockFirestore.collection('gifts')).thenReturn(mockCollection);
+      when(mockCollection.doc(giftId)).thenReturn(mockDocument);
+
+      // Use the helper to stub Firestore document update
+      stubFirestoreDocWrite(
+        mockFirestore: mockFirestore,
+        mockCollection: mockCollection,
+        docId: giftId,
+        mockDocument: mockDocument,
+        setMap: {}, // Not needed
+        updateMap: updatedData,
+      );
+
+      // Call the method under test
       await firebaseHelper.updateGiftInFirestore(
         giftId: giftId,
         name: updatedData['name'] as String,
         price: updatedData['price'] as double,
         status: updatedData['status'] as String,
+        pledgerId: updatedData['pledger_id'] as String?,
       );
 
-      verify(mockFirestore.collection('gifts').doc(giftId).update(updatedData))
-          .called(1);
+      // Verify the update method was called
+      verify(mockDocument.update(updatedData)).called(1);
     });
   });
 
   group('Notifications-related Tests', () {
     test('Listen for Pledged Gifts', () async {
-      when(mockFirestore
-              .collection('gifts')
-              .where('status', isEqualTo: 'Pledged')
-              .snapshots())
-          .thenAnswer((_) => const Stream.empty());
+      // Create shared mock references
+      final mockCollection = MockCollectionReference<Map<String, dynamic>>();
+      final mockStream = Stream<QuerySnapshot<Map<String, dynamic>>>.empty();
 
+      print('Stubbing Firestore collection...');
+      when(mockFirestore.collection('gifts')).thenReturn(mockCollection);
+
+      // Stub Firestore query and snapshots stream
+      when(mockCollection.where('status', isEqualTo: 'Pledged'))
+          .thenReturn(mockCollection);
+      when(mockCollection.snapshots()).thenAnswer((_) {
+        print(
+            'MockCollection.snapshots() called for gifts with status Pledged');
+        return mockStream;
+      });
+
+      // Call the method under test
       firebaseHelper.listenForPledgedGifts('user1');
 
-      verify(mockFirestore
-              .collection('gifts')
-              .where('status', isEqualTo: 'Pledged')
-              .snapshots())
-          .called(1);
+      // Verify that snapshots stream was accessed
+      verify(mockCollection.where('status', isEqualTo: 'Pledged')).called(1);
+      verify(mockCollection.snapshots()).called(1);
     });
   });
 }
