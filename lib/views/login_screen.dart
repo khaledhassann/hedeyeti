@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
 
           if (result.isNotEmpty) {
-            print('Record fetched: ${result.first}');
+            // print('Record fetched: ${result.first}');
           } else {
             print('No record found with row ID: $rowId');
           }

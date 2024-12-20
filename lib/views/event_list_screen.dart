@@ -97,15 +97,14 @@ class _EventListPageState extends State<EventListPage> {
                 .toList();
 
         final remoteEvents = await _firebaseHelper
-            .getEventsForUserFromFireStore(_currentUserId!);
+                .getEventsForUserFromFireStore(_currentUserId!) ??
+            [];
 
         // Combine local and remote events, avoiding duplicates
         final combinedEvents = [
-          ...localEvents,
-          if (remoteEvents != null)
-            ...remoteEvents.where((remoteEvent) => !localEvents.any(
-                  (localEvent) => localEvent.id == remoteEvent.id,
-                )),
+          ...remoteEvents,
+          ...localEvents.where((localEvent) => !remoteEvents
+              .any((remoteEvent) => remoteEvent.id == localEvent.id)),
         ];
 
         setState(() {
